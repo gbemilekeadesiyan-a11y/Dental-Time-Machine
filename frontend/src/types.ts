@@ -227,6 +227,8 @@ export interface ChatResponse {
   proposed_plan?: PlanDetails | null
   /** Feature addition. Set only when the reply is in another language than the setting, because the user wrote in it. */
   language?: Language | null
+  /** Feature addition. The ZIP the person getting care lives in, as the user typed it; applied to the dentist search after the user confirms. */
+  proposed_zip?: string | null
 }
 
 export interface SummaryRequest {

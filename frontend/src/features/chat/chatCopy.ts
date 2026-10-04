@@ -33,6 +33,9 @@ export interface ChatCopy {
   feeProblem: string
   canWaitYes: (name: string) => string
   canWaitNo: string
+  zipQuestion: (zip: string) => string
+  zipUse: string
+  zipSkip: string
   comesAfter: (name: string) => string
   planTitle: string
   planHelp: string
@@ -108,6 +111,9 @@ export const CHAT_COPY: Record<Language, ChatCopy> = {
     feeProblem: 'Each fee must be between 0 and 50,000, and each tooth between 1 and 32.',
     canWaitYes: (name) => `Yes, my dentist said ${name} can wait`,
     canWaitNo: 'Keep it locked',
+    zipQuestion: (zip) => `Use ZIP ${zip} to find dentists nearby? Closer ones are listed first.`,
+    zipUse: 'Use it',
+    zipSkip: 'No thanks',
     comesAfter: (name) => `Comes after the ${name.toLowerCase()}`,
     planTitle: 'We heard these plan details',
     planHelp: 'Check them. They fill in the plan form only when you apply them.',
@@ -166,6 +172,9 @@ export const CHAT_COPY: Record<Language, ChatCopy> = {
     feeProblem: 'Cada tarifa debe estar entre 0 y 50.000, y cada diente entre 1 y 32.',
     canWaitYes: (name) => `Sí, mi dentista dijo que ${name} puede esperar`,
     canWaitNo: 'Mantener bloqueado',
+    zipQuestion: (zip) => `¿Usar el código postal ${zip} para buscar dentistas cercanos? Los más cercanos aparecen primero.`,
+    zipUse: 'Usarlo',
+    zipSkip: 'No, gracias',
     comesAfter: (name) => `Va después de: ${name}`,
     planTitle: 'Entendimos estos datos de tu plan',
     planHelp: 'Revísalos. Solo llenan el formulario del plan cuando los aplicas.',
@@ -224,6 +233,9 @@ export const CHAT_COPY: Record<Language, ChatCopy> = {
     feeProblem: 'Chaque tarif doit être entre 0 et 50 000, et chaque dent entre 1 et 32.',
     canWaitYes: (name) => `Oui, mon dentiste a dit que ${name} peut attendre`,
     canWaitNo: 'Garder verrouillé',
+    zipQuestion: (zip) => `Utiliser le code postal ${zip} pour trouver des dentistes proches ? Les plus proches sont affichés en premier.`,
+    zipUse: 'Utiliser',
+    zipSkip: 'Non merci',
     comesAfter: (name) => `Vient après : ${name}`,
     planTitle: 'Nous avons compris ces détails de votre régime',
     planHelp: "Vérifiez-les. Ils remplissent le formulaire du régime seulement quand vous les appliquez.",
@@ -282,6 +294,9 @@ export const CHAT_COPY: Record<Language, ChatCopy> = {
     feeProblem: 'Cada valor deve estar entre 0 e 50.000, e cada dente entre 1 e 32.',
     canWaitYes: (name) => `Sim, meu dentista disse que ${name} pode esperar`,
     canWaitNo: 'Manter bloqueado',
+    zipQuestion: (zip) => `Usar o código postal ${zip} para encontrar dentistas próximos? Os mais próximos aparecem primeiro.`,
+    zipUse: 'Usar',
+    zipSkip: 'Não, obrigado',
     comesAfter: (name) => `Vem depois de: ${name}`,
     planTitle: 'Entendemos estes dados do seu plano',
     planHelp: 'Confira. Eles só preenchem o formulário do plano quando você os aplica.',

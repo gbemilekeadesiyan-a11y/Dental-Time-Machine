@@ -5,6 +5,7 @@ import Notice from '../../components/Notice'
 import { procedureLabels } from '../../format'
 import type { Action, AppState } from '../../state'
 import type { ChatTurn, PlanDetails, Procedure } from '../../types'
+import { setFilter } from '../filters/filterStore'
 import { CHAT_COPY } from './chatCopy'
 import { completePlan } from './chatUtils'
 import ConfirmPlan from './ConfirmPlan'
@@ -37,6 +38,7 @@ export default function ChatIntake({ state, dispatch }: Props) {
   const [proposals, setProposals] = useState<Procedure[]>([])
   const [canWaitIds, setCanWaitIds] = useState<string[]>([])
   const [planDetails, setPlanDetails] = useState<PlanDetails | null>(null)
+  const [zip, setZip] = useState<string | null>(null)
   const speaker = useSpeaker()
   const titleId = useId()
   const inputId = useId()
@@ -82,6 +84,7 @@ export default function ChatIntake({ state, dispatch }: Props) {
         setTurns((t) => [...t, { role: 'assistant' as const, text: reply.say }].slice(-MAX_TURNS))
         if (reply.proposed_procedures.length > 0) setProposals(reply.proposed_procedures)
         if (reply.proposed_plan) setPlanDetails(reply.proposed_plan)
+        if (reply.proposed_zip) setZip(reply.proposed_zip)
         setCanWaitIds(reply.proposed_can_wait)
         if (preferences.voice_on) void speaker.play(reply.say, reply.language ?? preferences.language)
       } catch (e) {
@@ -178,6 +181,28 @@ export default function ChatIntake({ state, dispatch }: Props) {
           }}
           onDismiss={() => setPlanDetails(null)}
         />
+      )}
+
+      {zip && (
+        // Only where the dentist search starts; the ZIP stays in memory (CLAUDE.md section 12).
+        <div className="space-y-3 rounded-2xl bg-card p-4 shadow-sm ring-1 ring-ink/5">
+          <p className="text-sm text-ink">{copy.zipQuestion(zip)}</p>
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                setFilter('zip', zip)
+                setZip(null)
+              }}
+              className="btn-primary"
+            >
+              {copy.zipUse}
+            </button>
+            <button type="button" onClick={() => setZip(null)} className="btn-secondary">
+              {copy.zipSkip}
+            </button>
+          </div>
+        </div>
       )}
 
       {error && <Notice tone="problem">{error}</Notice>}

@@ -488,23 +488,79 @@ def test_prompt_describes_the_voice(client: TestClient, llm) -> None:
     assert "Short sentences" in system
 
 
+ZIP = "68508"  # A real ZIP (Lincoln, Nebraska) in the dentist search's ZIP list.
+
+
 @pytest.mark.parametrize(
-    ("with_care", "can_wait", "step"),
+    ("with_care", "can_wait", "said", "step"),
     [
-        (False, False, "Find out what their dentist recommended"),
-        (True, False, "did their dentist say it can wait?"),
-        (True, True, "Offer to walk them through their estimate"),
+        (False, False, "ok", "Find out what their dentist recommended"),
+        (True, False, "ok", "What ZIP code do you live in?"),
+        (True, False, f"ok, we live in {ZIP}", "did their dentist say it can wait?"),
+        (True, True, f"ok, we live in {ZIP}", "Offer to walk them through their estimate"),
     ],
 )
-def test_prompt_names_one_next_step(client: TestClient, llm, with_care: bool, can_wait: bool, step: str) -> None:
+def test_prompt_names_one_next_step(
+    client: TestClient, llm, with_care: bool, can_wait: bool, said: str, step: str
+) -> None:
     fake = llm(reply())
-    payload = body(("user", "ok"), with_care=with_care)
+    payload = body(("user", said), with_care=with_care)
     for p in payload["procedures"]:
         p["can_wait"] = can_wait
     post(client, payload)
     system = fake.calls[0]["system"]
     current = system.split("Where this conversation is now: ", 1)[1].split("\n", 1)[0]
     assert step in current
+
+
+# ---------- ZIP code: where the dentist search starts ----------
+
+
+def test_zip_the_user_typed_is_proposed(client: TestClient, llm) -> None:
+    llm(reply(zip=ZIP))
+    data = post(client, body(("user", f"My daughter lives in {ZIP}"), with_care=True))
+    assert data["proposed_zip"] == ZIP
+
+
+@pytest.mark.parametrize(
+    ("said", "model_says"),
+    [
+        ("I'd rather not say", ZIP),  # Not typed by the user.
+        ("We live in 00000", "00000"),  # Not a real ZIP.
+        (f"It's {ZIP}", "6850"),  # Not five digits.
+        (f"It's {ZIP}", " 68508-1234"),  # ZIP+4 isn't what they typed as a ZIP.
+    ],
+)
+def test_zip_not_typed_or_not_real_is_dropped(client: TestClient, llm, said: str, model_says: str) -> None:
+    llm(reply(zip=model_says))
+    assert "proposed_zip" not in post(client, body(("user", said), with_care=True))
+
+
+def test_zip_from_an_earlier_message_is_not_proposed_again(client: TestClient, llm) -> None:
+    llm(reply(zip=ZIP))
+    turns = [("user", f"We live in {ZIP}"), ("assistant", "Thanks."), ("user", "What's next?")]
+    assert "proposed_zip" not in post(client, body(*turns, with_care=True))
+
+
+def test_zip_never_reaches_the_logs(client: TestClient, llm, caplog: pytest.LogCaptureFixture) -> None:
+    llm(reply("You'll pay $999.", zip=ZIP), reply("You'll pay $999.", zip=ZIP))
+    with caplog.at_level(logging.DEBUG):
+        post(client, body(("user", f"We live in {ZIP}"), with_care=True))
+    assert ZIP not in caplog.text
+
+
+def test_prompt_asks_for_zip_without_suggesting_one(client: TestClient, llm) -> None:
+    fake = llm(reply())
+    post(client, body(("user", "ok"), with_care=True))
+    system = fake.calls[0]["system"]
+    assert "like your child, use their ZIP" in system
+    assert "zip only if they typed it" in system
+
+
+def test_prompt_never_refuses_another_language(client: TestClient, llm) -> None:
+    fake = llm(reply())
+    post(client, body(("user", "ok")))
+    assert "Never refuse to help or ask them to switch languages" in fake.calls[0]["system"]
 
 
 def test_plan_details_are_asked_two_at_a_time(client: TestClient, llm) -> None:

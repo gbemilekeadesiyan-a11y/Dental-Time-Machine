@@ -15,6 +15,7 @@ from app.ai.language import _WORDS, detect
         ("Mi dentista dijo que necesito una corona y dos empastes", "es"),
         ("¿Qué es un deducible?", "es"),
         ("Me duele la muela", "es"),
+        ("listo, ya puse mi plan", "es"),
         ("Mon dentiste dit que j'ai besoin d'une couronne", "fr"),
         ("Qu'est-ce qu'une franchise ?", "fr"),
         ("Meu dentista disse que preciso de uma coroa", "pt"),
