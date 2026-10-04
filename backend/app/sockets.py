@@ -253,11 +253,11 @@ def chat(request: ChatRequest) -> ChatResponse:
     return ChatResponse(say=say, proposed_procedures=[], proposed_can_wait=[], done_intake=done)
 
 
-def _money(value: float) -> str:
+def format_money(value: float) -> str:
     return f"${value:,.0f}" if float(value).is_integer() else f"${value:,.2f}"
 
 
-def _display_names(procedures: list[Procedure]) -> dict[str, str]:
+def display_names(procedures: list[Procedure]) -> dict[str, str]:
     """Procedure id to a readable name; repeated names get a number ("Crown 2")."""
     totals: dict[str, int] = {}
     for p in procedures:
@@ -274,14 +274,14 @@ def summary(request: SummaryRequest) -> str:
     """FAKE summary: a fixed recap built only from the engine's OptimizeResult."""
     language = request.preferences.language
     result = request.optimize
-    parts = [SUMMARY_TEXT["all_now"][language].format(all_now=_money(result.all_now.totals.you_pay))]
+    parts = [SUMMARY_TEXT["all_now"][language].format(all_now=format_money(result.all_now.totals.you_pay))]
     if result.moved and result.savings > 0:
-        names = _display_names(request.procedures)
+        names = display_names(request.procedures)
         parts.append(
             SUMMARY_TEXT["savings"][language].format(
                 names=", ".join(names.get(i, i) for i in result.moved),
-                best=_money(result.best.totals.you_pay),
-                savings=_money(result.savings),
+                best=format_money(result.best.totals.you_pay),
+                savings=format_money(result.savings),
             )
         )
     else:
@@ -289,7 +289,7 @@ def summary(request: SummaryRequest) -> str:
     if request.preferences.style in ("detailed", "numbers"):
         parts.append(
             SUMMARY_TEXT["details"][language].format(
-                plan=_money(result.best.totals.plan_pays), left=_money(result.best.max_left.this_year)
+                plan=format_money(result.best.totals.plan_pays), left=format_money(result.best.max_left.this_year)
             )
         )
     parts.append(RESET_TEXT[language])
