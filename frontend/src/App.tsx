@@ -1,5 +1,5 @@
 import { AnimatePresence, motion, useReducedMotion, type Variants } from 'framer-motion'
-import { useReducer, useState } from 'react'
+import { useEffect, useReducer, useState } from 'react'
 import { ArrowLeft, ArrowRight } from './components/Icons'
 import Container from './components/Container'
 import SiteHeader from './components/SiteHeader'
@@ -12,7 +12,6 @@ import YourYear from './screens/YourYear'
 import Landing from './features/timeline/landing/Landing'
 import ChatIntake from './features/chat/ChatIntake'
 import ChatSummary from './features/chat/ChatSummary'
-import PreferencesPicker from './features/chat/PreferencesPicker'
 import SummaryScreen from './features/summary/SummaryScreen'
 import { NAV, stepOf } from './copy'
 import { initialState, reducer } from './state'
@@ -75,6 +74,12 @@ const toTop = () => window.scrollTo({ top: 0, behavior: 'instant' })
 export default function App() {
   const [{ view, dir }, setNav] = useState<{ view: View; dir: Direction }>({ view: 'start', dir: 1 })
   const [state, dispatch] = useReducer(reducer, initialState)
+
+  // Screen readers and the browser's speech engine follow the page language. Set here, not in a
+  // picker, because the language pickers now live in the chat cards and aren't on every page.
+  useEffect(() => {
+    document.documentElement.lang = state.preferences.language
+  }, [state.preferences.language])
   const reduceMotion = useReducedMotion()
 
   /** Moves to another view and remembers which way we went, for the slide. */
@@ -95,7 +100,7 @@ export default function App() {
         return <TwoFutures state={state} dispatch={dispatch} onEditCare={() => go(0)} />
       case 3:
         // Mount point (feature/chat): the chatbot recap, beside the visual summary.
-        return <SummaryScreen state={state} onEditCare={() => go(0)} recap={<ChatSummary state={state} />} />
+        return <SummaryScreen state={state} onEditCare={() => go(0)} recap={<ChatSummary state={state} dispatch={dispatch} />} />
       case 4:
         return <FindCare state={state} onEditCare={() => go(0)} />
       case 5:
@@ -134,11 +139,7 @@ export default function App() {
           {/* pt-24 clears the 72 px header with 24 px to spare. */}
           <Container className="flex min-h-screen flex-col gap-8 pt-24 pb-6 tablet:pb-8">
             <h1 className="sr-only">Dental Time Machine</h1>
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <StepIndicator steps={SCREENS} current={view} onSelect={(i) => go(i as ScreenIndex)} />
-              {/* Mount point (feature/chat): language, style and voice. */}
-              <PreferencesPicker preferences={state.preferences} dispatch={dispatch} />
-            </div>
+            <StepIndicator steps={SCREENS} current={view} onSelect={(i) => go(i as ScreenIndex)} />
 
             <main className="flex-1">
               <AnimatePresence mode="wait" initial={false} custom={dir} onExitComplete={toTop}>

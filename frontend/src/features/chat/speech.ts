@@ -59,6 +59,14 @@ export function useSpeechInput(language: Language, onDone: (transcript: string) 
 
   useEffect(() => () => recognition.current?.abort(), [])
 
+  // A session can't change language mid-way: when the language changes, drop the one that's
+  // running (without sending what it half-heard). The next tap listens in the new language.
+  useEffect(() => {
+    if (!recognition.current) return
+    transcript.current = ''
+    recognition.current.abort()
+  }, [language])
+
   const start = useCallback(() => {
     const Ctor = recognitionConstructor()
     if (!Ctor) return

@@ -53,6 +53,12 @@ export interface ChatCopy {
   }
   inNetwork: string
   outOfNetwork: string
+  /** Before the list of required plan fields still empty after applying. */
+  stillNeeded: string
+  /** Shown after the user applies plan details from chat. */
+  planAdded: string
+  /** Announced when the chat language changes; the language name is in that language. */
+  nowReplying: (language: string) => string
   summaryTitle: string
   summaryWorking: string
   summaryNeedsCare: string
@@ -131,6 +137,9 @@ export const CHAT_COPY: Record<Language, ChatCopy> = {
     },
     inNetwork: 'In network',
     outOfNetwork: 'Out of network',
+    stillNeeded: 'Still needed:',
+    planAdded: 'Added to your plan. You can edit it below.',
+    nowReplying: (language) => `Now replying in ${language}.`,
     summaryTitle: 'Your summary',
     summaryWorking: 'Writing your summary…',
     summaryNeedsCare: 'Add your care and plan details to see a summary.',
@@ -192,6 +201,9 @@ export const CHAT_COPY: Record<Language, ChatCopy> = {
     },
     inNetwork: 'Dentro de la red',
     outOfNetwork: 'Fuera de la red',
+    stillNeeded: 'Todavía falta:',
+    planAdded: 'Lo agregamos a tu plan. Puedes editarlo abajo.',
+    nowReplying: (language) => `Ahora respondo en ${language}.`,
     summaryTitle: 'Tu resumen',
     summaryWorking: 'Escribiendo tu resumen…',
     summaryNeedsCare: 'Agrega tu atención y los datos de tu plan para ver un resumen.',
@@ -253,6 +265,9 @@ export const CHAT_COPY: Record<Language, ChatCopy> = {
     },
     inNetwork: 'Dans le réseau',
     outOfNetwork: 'Hors réseau',
+    stillNeeded: 'Il manque encore :',
+    planAdded: 'Ajouté à votre régime. Vous pouvez le modifier ci-dessous.',
+    nowReplying: (language) => `Je réponds maintenant en ${language}.`,
     summaryTitle: 'Votre résumé',
     summaryWorking: 'Rédaction de votre résumé…',
     summaryNeedsCare: 'Ajoutez vos soins et les détails de votre régime pour voir un résumé.',
@@ -314,6 +329,9 @@ export const CHAT_COPY: Record<Language, ChatCopy> = {
     },
     inNetwork: 'Na rede',
     outOfNetwork: 'Fora da rede',
+    stillNeeded: 'Ainda falta:',
+    planAdded: 'Adicionado ao seu plano. Você pode editá-lo abaixo.',
+    nowReplying: (language) => `Agora respondo em ${language}.`,
     summaryTitle: 'Seu resumo',
     summaryWorking: 'Escrevendo seu resumo…',
     summaryNeedsCare: 'Adicione seu tratamento e os dados do seu plano para ver um resumo.',

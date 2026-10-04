@@ -1,4 +1,5 @@
 import { useId, type Dispatch, type ReactNode } from 'react'
+import { PLAN_FORM_ID } from '../anchors'
 import { ArrowRight } from '../components/Icons'
 import Notice from '../components/Notice'
 import StepShell from '../components/StepShell'
@@ -132,7 +133,8 @@ function PlanForm({ plan, onChange }: { plan: Plan; onChange: (plan: Plan) => vo
     )
 
   return (
-    <div className="glass rounded-3xl p-6">
+    // scroll-mt-24 keeps the form's top clear of the header pill when the chat scrolls here.
+    <div id={PLAN_FORM_ID} className="glass scroll-mt-24 rounded-3xl p-6">
     <fieldset className="space-y-6">
       <legend className="mb-4 text-xl font-semibold tracking-tight text-ink">Your plan</legend>
 
