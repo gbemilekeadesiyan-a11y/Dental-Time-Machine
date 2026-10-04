@@ -17,8 +17,8 @@ export default function WordReveal() {
   const words = LANDING.revealText.split(' ')
 
   return (
-    // The bottom space lets the paragraph scroll far enough to finish the reveal on any screen.
-    <section aria-labelledby="why-timing" className="bg-bg px-5 pt-28 pb-[45svh] sm:px-8 sm:pt-40">
+    // The carousel below gives the page enough scroll room for the reveal to finish.
+    <section aria-labelledby="why-timing" className="bg-bg px-5 py-28 sm:px-8 sm:py-40">
       <div className="mx-auto max-w-4xl space-y-8">
         <h2 id="why-timing" className="text-sm font-medium tracking-[0.18em] text-muted-text uppercase">
           {LANDING.revealLabel}
