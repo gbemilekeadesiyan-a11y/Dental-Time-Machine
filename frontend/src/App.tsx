@@ -9,6 +9,7 @@ import YourYear from './screens/YourYear'
 import Landing from './features/timeline/landing/Landing'
 import SummaryScreen from './features/summary/SummaryScreen'
 import { initialState, reducer } from './state'
+import RollLabel from './components/RollLabel'
 
 interface ScreenDef {
   id: string
@@ -78,12 +79,16 @@ export default function App() {
 
         <footer className="flex justify-between gap-3">
           <button type="button" onClick={goBack} className="btn-secondary">
-            <ArrowLeft />
-            Back
+            <RollLabel>
+              <ArrowLeft />
+              Back
+            </RollLabel>
           </button>
           <button type="button" onClick={goNext} disabled={view === LAST} className="btn-primary">
-            Next
-            <ArrowRight />
+            <RollLabel>
+              Next
+              <ArrowRight />
+            </RollLabel>
           </button>
         </footer>
       </div>

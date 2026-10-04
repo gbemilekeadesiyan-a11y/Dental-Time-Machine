@@ -9,6 +9,7 @@ import {
 } from 'framer-motion'
 import { useEffect, useId, useRef, useState, type FocusEvent, type KeyboardEvent } from 'react'
 import { LANDING } from './landingCopy'
+import RollLabel from '../../../components/RollLabel'
 
 /** Seconds each slide stays before moving to the next. */
 const SLIDE_SECONDS = 6
@@ -212,10 +213,12 @@ export default function FeatureCarousel() {
                 type="button"
                 onClick={() => setUserPaused((p) => !p)}
                 aria-label={userPaused ? LANDING.playLabel : LANDING.pauseLabel}
-                className="glass absolute top-4 right-4 z-10 inline-flex min-h-11 items-center gap-2 rounded-full px-4 text-sm font-medium text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                className="btn-light absolute top-4 right-4 z-10 px-4 text-sm"
               >
-                {userPaused ? <PlayIcon /> : <PauseIcon />}
-                {userPaused ? LANDING.play : LANDING.pause}
+                <RollLabel>
+                  {userPaused ? <PlayIcon /> : <PauseIcon />}
+                  {userPaused ? LANDING.play : LANDING.pause}
+                </RollLabel>
               </button>
             )}
           </div>

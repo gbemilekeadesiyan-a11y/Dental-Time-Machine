@@ -4,6 +4,7 @@ import Notice from '../../../components/Notice'
 import HeroPhoto from './HeroPhoto'
 import { LANDING } from './landingCopy'
 import SplitHeadline from './SplitHeadline'
+import RollLabel from '../../../components/RollLabel'
 
 interface Props {
   onSeeMaya: () => void
@@ -54,10 +55,12 @@ export default function FocusHero({ onSeeMaya, loading, error }: Props) {
             type="button"
             onClick={onSeeMaya}
             disabled={loading}
-            className="inline-flex min-h-12 items-center gap-2 rounded-full bg-card px-6 text-base font-medium text-ink shadow-lg shadow-ink/20 transition-shadow hover:shadow-xl focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-white disabled:opacity-70"
+            className="btn-light min-h-12 px-6 text-base shadow-lg shadow-ink/20 [--focus-ring:#fff]"
           >
-            {loading ? LANDING.loadingMaya : LANDING.seeMaya}
-            <ArrowRight />
+            <RollLabel>
+              {loading ? LANDING.loadingMaya : LANDING.seeMaya}
+              <ArrowRight />
+            </RollLabel>
           </button>
           {error && (
             <div className="w-full max-w-sm">

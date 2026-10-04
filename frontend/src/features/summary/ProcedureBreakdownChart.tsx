@@ -4,6 +4,7 @@ import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxi
 import { formatMoney, procedureLabels } from '../../format'
 import type { LineResult, Procedure, Result, Year } from '../../types'
 import { CHART_COLORS } from './summaryCopy'
+import RollLabel from '../../components/RollLabel'
 
 interface Props {
   result: Result
@@ -44,7 +45,7 @@ export default function ProcedureBreakdownChart({ result, procedures }: Props) {
           onClick={() => setView((v) => (v === 'chart' ? 'table' : 'chart'))}
           className="btn-secondary min-h-9 px-4 py-1.5 text-sm"
         >
-          {view === 'chart' ? 'Show as a table' : 'Show as a chart'}
+          <RollLabel>{view === 'chart' ? 'Show as a table' : 'Show as a chart'}</RollLabel>
         </button>
       </div>
 
