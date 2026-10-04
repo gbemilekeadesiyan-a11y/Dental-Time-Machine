@@ -30,6 +30,12 @@ Share = Annotated[float, Strict(), Field(ge=0, le=1, allow_inf_nan=False)]
 # Procedure ids: letters, numbers, dashes and underscores (crypto.randomUUID() fits).
 Id = Annotated[str, Field(min_length=1, max_length=MAX_ID, pattern=r"^[A-Za-z0-9_-]+$")]
 
+# Optional feature fields on frozen shapes (CLAUDE.md section 6). Left out of the JSON
+# while unset, so existing responses stay byte-for-byte the same.
+def _unset(value: Any) -> bool:
+    return value is None
+
+
 # Maps procedure id to the plan year it is scheduled in.
 Schedule = Annotated[dict[Id, Year], Field(max_length=MAX_PROCEDURES)]
 
@@ -52,6 +58,8 @@ class Procedure(_Model):
     allowed_fee: Money
     depends_on: Id | None = None
     can_wait: bool = False
+    # Feature addition: self-pay price if the dentist offers one; otherwise cash = billed_fee.
+    cash_price: Money | None = Field(default=None, exclude_if=_unset)
 
     @model_validator(mode="before")
     @classmethod
@@ -83,6 +91,8 @@ class Plan(_Model):
     used_this_year: Money = 0
     deductible_paid_this_year: Money = 0
     in_network: bool
+    # Feature addition: needed for a fair cash vs insurance comparison.
+    annual_premium: Money | None = Field(default=None, exclude_if=_unset)
 
     @model_validator(mode="after")
     def _check_usage(self) -> Plan:
@@ -120,11 +130,34 @@ class MaxLeft(_Model):
     next_year: float
 
 
+class CashComparison(_Model):
+    """Feature addition: cash vs insurance for the same care. Computed by the engine (not yet)."""
+
+    cash_total: float
+    insurance_you_pay: float
+    premiums_in_period: float | None
+    cheaper: Literal["cash", "insurance", "about_equal"]
+    assumptions: list[str]
+
+
 class Result(_Model):
     per_procedure: list[LineResult]
     totals: Totals
     max_left: MaxLeft
     warnings: list[str]
+    # Feature addition: the engine will compute this. Not built yet, so always unset.
+    cash_comparison: CashComparison | None = Field(default=None, exclude_if=_unset)
+
+
+MAX_ALTERNATIVES = 5
+
+
+class Alternative(_Model):
+    """One valid schedule from the optimizer, for Samuel's timeline permutations."""
+
+    schedule: Schedule
+    you_pay: float
+    moved: list[str]
 
 
 class OptimizeResult(_Model):
@@ -133,6 +166,10 @@ class OptimizeResult(_Model):
     best_schedule: Schedule
     savings: float
     moved: list[str]
+    # Feature addition: top 5 valid schedules. Not built yet, so always unset.
+    alternatives: Annotated[list[Alternative], Field(max_length=MAX_ALTERNATIVES)] | None = Field(
+        default=None, exclude_if=_unset
+    )
 
 
 class CatalogItem(_Model):
@@ -155,6 +192,8 @@ class CalculateRequest(_Model):
 class OptimizeRequest(_Model):
     procedures: ProcedureList
     plan: Plan
+    # Feature addition: cap on this year's you_pay (Kuwa's budget filter). Accepted, not applied yet.
+    budget_this_year: Money | None = None
 
 
 MAX_TEXT = 2_000
@@ -178,3 +217,101 @@ class ExplainRequest(_Model):
 
 class ExplainResponse(_Model):
     text: str
+
+
+# ======================================================================
+# Feature additions (CLAUDE.md section 6). Shapes only: no engine logic yet.
+# ======================================================================
+
+MAX_CHAT_TURNS = 20
+MAX_DISTANCE_MILES = 500
+MAX_LANGUAGES = 10
+MAX_SHORT_TEXT = 200
+
+Language = Literal["en", "es", "fr", "pt"]
+Style = Literal["simple", "detailed", "numbers"]
+AgeRange = Literal["under_18", "18_64", "65_plus"]
+ShortText = Annotated[str, Field(min_length=1, max_length=MAX_SHORT_TEXT)]
+LanguageName = Annotated[str, Field(min_length=1, max_length=40)]
+
+
+class Preferences(_Model):
+    """Session-only display preferences. Never stored."""
+
+    language: Language
+    style: Style
+    voice_on: bool
+
+
+class ChatTurn(_Model):
+    role: Literal["user", "assistant"]
+    text: Annotated[str, Field(min_length=1, max_length=MAX_TEXT)]
+
+
+class ChatRequest(_Model):
+    turns: Annotated[list[ChatTurn], Field(max_length=MAX_CHAT_TURNS)]
+    preferences: Preferences
+    procedures: Annotated[list[Procedure], Field(max_length=MAX_PROCEDURES)]
+    plan: Plan | None
+
+
+class ChatResponse(_Model):
+    """say is checked by the dollar guard. Proposals need the user's explicit confirmation."""
+
+    say: str
+    proposed_procedures: Annotated[list[Procedure], Field(max_length=MAX_PROCEDURES)]
+    proposed_can_wait: Annotated[list[Id], Field(max_length=MAX_PROCEDURES)]
+    done_intake: bool
+
+
+class SummaryRequest(_Model):
+    procedures: ProcedureList
+    plan: Plan
+    schedule: Schedule
+    optimize: OptimizeResult
+    preferences: Preferences
+
+
+class SummaryResponse(_Model):
+    """text is checked by the dollar guard."""
+
+    text: str
+
+
+class DocumentReadResult(_Model):
+    """Always shown on a confirm form, never applied directly."""
+
+    plan: Plan | None
+    procedures: Annotated[list[Procedure], Field(max_length=MAX_PROCEDURES)]
+    fields_found: list[str]
+    warnings: list[str]
+
+
+class FilterState(_Model):
+    zip: Annotated[str, Field(pattern=r"^[0-9]{5}$")]
+    age_range: AgeRange
+    max_distance_miles: Annotated[float, Strict(), Field(gt=0, le=MAX_DISTANCE_MILES, allow_inf_nan=False)]
+    in_network_only: bool
+    preferred_plan_id: Id
+    languages: Annotated[list[LanguageName], Field(max_length=MAX_LANGUAGES)]
+    budget_this_year: Money
+
+
+class PlanOption(_Model):
+    id: Id
+    name: ShortText
+    monthly_premium: Money
+    plan: Plan
+    source: Literal["demo", "user"]
+
+
+class DentistListing(_Model):
+    """in_network, languages and accepting_new are demo data."""
+
+    npi: Annotated[str, Field(pattern=r"^[0-9]{10}$")]
+    name: ShortText
+    address: ShortText
+    distance_miles: Annotated[float, Strict(), Field(ge=0, allow_inf_nan=False)]
+    in_network: bool
+    languages: Annotated[list[LanguageName], Field(max_length=MAX_LANGUAGES)]
+    accepting_new: bool

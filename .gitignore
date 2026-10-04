@@ -3,8 +3,7 @@
 .env.*
 !.env.example
 
-# Claude instructions and team handbook (kept local)
-CLAUDE.md
+# Team handbook (kept local)
 HANDBOOK.md
 
 # Python

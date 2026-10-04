@@ -149,6 +149,7 @@ _TOP_LABELS = {
     "term": "Term",
     "language": "Language",
     "style": "Style",
+    "budget_this_year": "Budget this year",
 }
 _PROCEDURE_LABELS = {
     "id": "id",
@@ -160,6 +161,7 @@ _PROCEDURE_LABELS = {
     "allowed_fee": "allowed fee",
     "depends_on": "'depends on' id",
     "can_wait": "'can wait' setting",
+    "cash_price": "cash price",
 }
 _PLAN_LABELS = {
     "annual_max": "Annual maximum",
@@ -170,10 +172,14 @@ _PLAN_LABELS = {
     "used_this_year": "Benefits used this year",
     "deductible_paid_this_year": "Deductible paid this year",
     "in_network": "The in-network setting",
+    "annual_premium": "Annual premium",
 }
 _COVERAGE_LABELS = {"preventive": "Preventive coverage", "basic": "Basic coverage", "major": "Major coverage"}
 
-_MONEY_FIELDS = {"billed_fee", "allowed_fee", "annual_max", "deductible", "used_this_year", "deductible_paid_this_year"}
+_MONEY_FIELDS = {
+    "billed_fee", "allowed_fee", "annual_max", "deductible", "used_this_year", "deductible_paid_this_year",
+    "cash_price", "annual_premium", "budget_this_year",
+}
 _RANGES = {
     **{field: f"between 0 and {MAX_FEE:,}" for field in _MONEY_FIELDS},
     **{field: "between 0 and 1" for field in _COVERAGE_LABELS},

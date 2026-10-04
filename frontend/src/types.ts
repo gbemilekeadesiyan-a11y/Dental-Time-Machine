@@ -29,6 +29,8 @@ export interface Procedure {
   depends_on: string | null
   /** False until the user confirms "My dentist said this can wait." */
   can_wait: boolean
+  /** Feature addition. Self-pay price if the dentist offers one; otherwise cash = billed_fee. 0 to 50,000. */
+  cash_price?: number | null
 }
 
 /** Share of the allowed fee the plan pays, per category. Each is 0 to 1. */
@@ -50,6 +52,8 @@ export interface Plan {
   used_this_year: number
   deductible_paid_this_year: number
   in_network: boolean
+  /** Feature addition. Needed for a fair cash vs insurance comparison. 0 to 50,000. */
+  annual_premium?: number | null
 }
 
 /** Procedure id to the plan year it is scheduled in. */
@@ -85,6 +89,8 @@ export interface Result {
   totals: Totals
   max_left: MaxLeft
   warnings: string[]
+  /** Feature addition. Computed by the engine (not built yet, so absent for now). */
+  cash_comparison?: CashComparison | null
 }
 
 export interface OptimizeResult {
@@ -94,6 +100,8 @@ export interface OptimizeResult {
   savings: number
   /** Procedure ids moved to next year in the best schedule. */
   moved: string[]
+  /** Feature addition. Up to 5 valid schedules (not built yet, so absent for now). */
+  alternatives?: Alternative[] | null
 }
 
 export interface CatalogItem {
@@ -119,6 +127,8 @@ export interface CalculateRequest {
 export interface OptimizeRequest {
   procedures: Procedure[]
   plan: Plan
+  /** Feature addition. Cap on this year's you_pay. Accepted, not applied yet. 0 to 50,000. */
+  budget_this_year?: number | null
 }
 
 export interface ParseRequest {
@@ -140,4 +150,114 @@ export interface ExplainResponse {
 /** Every error response body: one plain-English sentence. */
 export interface ErrorResponse {
   detail: string
+}
+
+// ---------- feature additions (CLAUDE.md section 6). Shapes only: no engine logic yet ----------
+
+export type Language = 'en' | 'es' | 'fr' | 'pt'
+export type Style = 'simple' | 'detailed' | 'numbers'
+export type AgeRange = 'under_18' | '18_64' | '65_plus'
+
+/** Feature addition. Cash vs insurance for the same care, computed by the engine. */
+export interface CashComparison {
+  cash_total: number
+  insurance_you_pay: number
+  premiums_in_period: number | null
+  cheaper: 'cash' | 'insurance' | 'about_equal'
+  assumptions: string[]
+}
+
+/** One valid schedule from the optimizer, for the timeline permutations. */
+export interface Alternative {
+  schedule: Schedule
+  you_pay: number
+  moved: string[]
+}
+
+/** Session only. Never stored. */
+export interface Preferences {
+  language: Language
+  style: Style
+  voice_on: boolean
+}
+
+export interface ChatTurn {
+  role: 'user' | 'assistant'
+  /** 1 to 2,000 characters. */
+  text: string
+}
+
+export interface ChatRequest {
+  /** At most 20 turns. */
+  turns: ChatTurn[]
+  preferences: Preferences
+  /** At most 20. */
+  procedures: Procedure[]
+  plan: Plan | null
+}
+
+export interface ChatResponse {
+  /** Checked by the dollar guard. */
+  say: string
+  /** Needs the user's confirmation before use. */
+  proposed_procedures: Procedure[]
+  /** Needs an explicit "yes" from the user before any procedure is unlocked. */
+  proposed_can_wait: string[]
+  done_intake: boolean
+}
+
+export interface SummaryRequest {
+  procedures: Procedure[]
+  plan: Plan
+  schedule: Schedule
+  optimize: OptimizeResult
+  preferences: Preferences
+}
+
+export interface SummaryResponse {
+  /** Checked by the dollar guard. */
+  text: string
+}
+
+/** Always shown on a confirm form, never applied directly. */
+export interface DocumentReadResult {
+  plan: Plan | null
+  procedures: Procedure[]
+  fields_found: string[]
+  warnings: string[]
+}
+
+export interface FilterState {
+  /** Five digits, for example "27401". */
+  zip: string
+  age_range: AgeRange
+  /** More than 0, at most 500. */
+  max_distance_miles: number
+  in_network_only: boolean
+  preferred_plan_id: string
+  /** At most 10, each up to 40 characters. */
+  languages: string[]
+  /** 0 to 50,000. */
+  budget_this_year: number
+}
+
+export interface PlanOption {
+  id: string
+  name: string
+  /** 0 to 50,000. */
+  monthly_premium: number
+  plan: Plan
+  source: 'demo' | 'user'
+}
+
+/** in_network, languages and accepting_new are demo data. */
+export interface DentistListing {
+  /** Ten digits. */
+  npi: string
+  name: string
+  address: string
+  distance_miles: number
+  in_network: boolean
+  languages: string[]
+  accepting_new: boolean
 }
