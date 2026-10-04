@@ -2,10 +2,12 @@ import { useCallback, useEffect, useId, useRef, useState, type Dispatch } from '
 import { ApiError, chat, isAbortError } from '../../api'
 import { ArrowRight } from '../../components/Icons'
 import Notice from '../../components/Notice'
+import { procedureLabels } from '../../format'
 import type { Action, AppState } from '../../state'
-import type { ChatTurn, Procedure } from '../../types'
+import type { ChatTurn, PlanDetails, Procedure } from '../../types'
 import { CHAT_COPY } from './chatCopy'
-import { completePlan, displayNames } from './chatUtils'
+import { completePlan } from './chatUtils'
+import ConfirmPlan from './ConfirmPlan'
 import ConfirmProposals from './ConfirmProposals'
 import { useSpeaker, useSpeechInput } from './speech'
 
@@ -34,6 +36,7 @@ export default function ChatIntake({ state, dispatch }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [proposals, setProposals] = useState<Procedure[]>([])
   const [canWaitIds, setCanWaitIds] = useState<string[]>([])
+  const [planDetails, setPlanDetails] = useState<PlanDetails | null>(null)
   const speaker = useSpeaker()
   const titleId = useId()
   const inputId = useId()
@@ -43,14 +46,21 @@ export default function ChatIntake({ state, dispatch }: Props) {
     savedTurns = turns
   }, [turns])
 
-  // The greeting comes from the backend in the chosen language (no LLM call for it).
+  // The assistant writes the greeting in the chosen language and style, knowing whether care is
+  // already entered. It's asked again only when language or style change, not on every edit.
+  const care = useRef({ procedures: state.procedures, plan: completePlan(state.plan), voiceOn: preferences.voice_on })
+  useEffect(() => {
+    care.current = { procedures: state.procedures, plan: completePlan(state.plan), voiceOn: preferences.voice_on }
+  }, [state.procedures, state.plan, preferences.voice_on])
+  const { language, style } = preferences
   useEffect(() => {
     const controller = new AbortController()
-    chat({ turns: [], preferences, procedures: [], plan: null }, { signal: controller.signal })
+    const { procedures, plan, voiceOn } = care.current
+    chat({ turns: [], preferences: { language, style, voice_on: voiceOn }, procedures, plan }, { signal: controller.signal })
       .then((r) => setGreeting(r.say))
       .catch(() => setGreeting(''))
     return () => controller.abort()
-  }, [preferences])
+  }, [language, style])
 
   const send = useCallback(
     async (text: string) => {
@@ -71,6 +81,7 @@ export default function ChatIntake({ state, dispatch }: Props) {
         )
         setTurns((t) => [...t, { role: 'assistant' as const, text: reply.say }].slice(-MAX_TURNS))
         if (reply.proposed_procedures.length > 0) setProposals(reply.proposed_procedures)
+        if (reply.proposed_plan) setPlanDetails(reply.proposed_plan)
         setCanWaitIds(reply.proposed_can_wait)
         if (preferences.voice_on) void speaker.play(reply.say, preferences.language)
       } catch (e) {
@@ -85,7 +96,7 @@ export default function ChatIntake({ state, dispatch }: Props) {
 
   const mic = useSpeechInput(preferences.language, (transcript) => void send(transcript))
 
-  const names = displayNames(state.procedures)
+  const names = procedureLabels(state.procedures)
   const waitable = canWaitIds.filter((id) => state.procedures.some((p) => p.id === id && !p.can_wait))
 
   return (
@@ -131,16 +142,24 @@ export default function ChatIntake({ state, dispatch }: Props) {
         <ConfirmProposals
           key={proposals.map((p) => p.id).join()}
           proposals={proposals}
+          existing={state.procedures}
           copy={copy}
           onConfirm={(confirmed) => {
-            // Ids were unique when proposed; keep them unique if care was added since (e.g. Load Maya).
+            // Ids were unique when proposed; keep them unique if care was added since (e.g. Load Maya),
+            // and point "comes after" links at the renamed ids.
             const taken = new Set(state.procedures.map((p) => p.id))
-            const unique = confirmed.map((p) => {
+            const renamed = new Map<string, string>()
+            for (const p of confirmed) {
               let id = p.id
               while (taken.has(id)) id = `${p.id}_${crypto.randomUUID().slice(0, 8)}`
               taken.add(id)
-              return { ...p, id }
-            })
+              renamed.set(p.id, id)
+            }
+            const unique = confirmed.map((p) => ({
+              ...p,
+              id: renamed.get(p.id) ?? p.id,
+              depends_on: p.depends_on === null ? null : (renamed.get(p.depends_on) ?? p.depends_on),
+            }))
             dispatch({ type: 'add_procedures', procedures: unique })
             setProposals([])
           }}
@@ -148,8 +167,21 @@ export default function ChatIntake({ state, dispatch }: Props) {
         />
       )}
 
+      {planDetails && (
+        <ConfirmPlan
+          details={planDetails}
+          plan={state.plan}
+          copy={copy}
+          onApply={(plan) => {
+            dispatch({ type: 'update_plan', plan })
+            setPlanDetails(null)
+          }}
+          onDismiss={() => setPlanDetails(null)}
+        />
+      )}
+
       {error && <Notice tone="problem">{error}</Notice>}
-      {mic.failed && <Notice>{copy.micProblem}</Notice>}
+      {mic.problem && <Notice>{copy.micProblems[mic.problem]}</Notice>}
       {speaker.failed && <Notice>{copy.voiceProblem}</Notice>}
       {mic.listening && (
         <p className="text-sm text-ink" role="status">
