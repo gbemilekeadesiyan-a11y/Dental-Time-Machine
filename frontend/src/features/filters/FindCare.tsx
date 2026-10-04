@@ -1,6 +1,7 @@
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import Disclaimer from '../../components/Disclaimer'
 import Notice from '../../components/Notice'
+import StepShell from '../../components/StepShell'
 import type { AppState } from '../../state'
 import AssistantBar from './AssistantBar'
 import CostCheck from './CostCheck'
@@ -28,22 +29,29 @@ export default function FindCare({ state, onEditCare }: Props) {
   const ageNote = filters.age_range ? AGE_NOTES[filters.age_range] : null
 
   return (
-    <section aria-labelledby="find-care-title" className="space-y-6">
-      <div className="space-y-2">
-        <h2 id="find-care-title" className="text-4xl font-light tracking-tight text-ink sm:text-5xl">
-          Find dental care
-        </h2>
-        <p className="text-ink/80">Search for dentists near you. Ask in your own words or use the filters, whichever is easier.</p>
-      </div>
-
-      <AssistantBar />
-      <ActiveChips />
-      <FilterPanel />
-      {ageNote && <Notice>{ageNote}</Notice>}
+    // Left: ask in your own words. Right: what the search finds. The full filters sit below both.
+    <StepShell
+      titleId="find-care-title"
+      title="Find dental care"
+      intro="Search for dentists near you. Ask in your own words or use the filters, whichever is easier."
+      columns="even"
+      aside={
+        <>
+          <AssistantBar />
+          <ActiveChips />
+        </>
+      }
+      after={
+        <div className="space-y-6">
+          <FilterPanel />
+          {ageNote && <Notice>{ageNote}</Notice>}
+          <Disclaimer />
+        </div>
+      }
+    >
       <CostCheck filters={filters} myPlan={state.plan} onEditCare={onEditCare} />
       <DentistResults filters={filters} />
-      <Disclaimer />
-    </section>
+    </StepShell>
   )
 }
 

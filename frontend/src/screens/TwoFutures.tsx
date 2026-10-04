@@ -4,6 +4,7 @@ import { ApiError, calculate, isAbortError, optimize } from '../api'
 import AnimatedMoney from '../components/AnimatedMoney'
 import Disclaimer from '../components/Disclaimer'
 import Notice from '../components/Notice'
+import StepShell from '../components/StepShell'
 import TimelineChip from '../components/TimelineChip'
 import { NO_BETTER_TIMING, NOTHING_CAN_WAIT } from '../copy'
 import { formatMoney, formatResetDate, listOfNames, procedureLabels } from '../format'
@@ -42,25 +43,26 @@ export default function TwoFutures({ state, dispatch, onEditCare }: Props) {
   }
 
   return (
-    <Screen>
-      <Futures procedures={procedures} plan={plan} onEditCare={onEditCare} />
+    // The two futures stay in view beside the timeline while it is rearranged.
+    <Screen aside={<Futures procedures={procedures} plan={plan} onEditCare={onEditCare} />}>
       <Timeline state={state} dispatch={dispatch} />
     </Screen>
   )
 }
 
-function Screen({ children }: { children: ReactNode }) {
+function Screen({ aside, children }: { aside?: ReactNode; children: ReactNode }) {
   return (
-    <section aria-labelledby="two-futures-title" className="space-y-8">
-      <div className="space-y-2">
-        <h2 id="two-futures-title" className="text-4xl font-light tracking-tight text-ink sm:text-5xl">
-          Two futures
-        </h2>
-        <p className="text-ink/80">See what changes if some of your care happens after your plan resets.</p>
-      </div>
+    <StepShell
+      titleId="two-futures-title"
+      title="Two futures"
+      intro="See what changes if some of your care happens after your plan resets."
+      aside={aside}
+      columns="narrow"
+      stickyAside
+      after={<Disclaimer />}
+    >
       {children}
-      <Disclaimer />
-    </section>
+    </StepShell>
   )
 }
 
@@ -111,7 +113,7 @@ function Futures({ procedures, plan, onEditCare }: { procedures: Procedure[]; pl
 
   return (
     <div className="space-y-4" aria-live="polite">
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2 desktop:grid-cols-1">
         <FutureCard
           variant="glass"
           title="Everything now"
@@ -249,7 +251,7 @@ function Timeline({ state, dispatch }: { state: AppState; dispatch: Dispatch<Act
   }
 
   return (
-    <div className="glass space-y-5 rounded-3xl p-5 sm:p-6">
+    <div className="glass space-y-6 rounded-3xl p-6">
       <div className="space-y-1">
         <h3 className="text-xl font-semibold tracking-tight text-ink">Try a different timing</h3>
         <p className="text-sm text-muted-text">

@@ -17,7 +17,7 @@ export default function SplitHeadline({ heroRef }: { heroRef: RefObject<HTMLElem
   const rightX = useTransform(smooth, [0, 1], ['0vw', DRIFT])
 
   const half =
-    'pointer-events-none z-10 text-5xl leading-[0.95] font-light tracking-tight text-white text-shadow-md text-shadow-ink/30 sm:text-6xl lg:text-6xl xl:text-7xl 2xl:text-8xl'
+    'heading-1 pointer-events-none z-10 text-white text-shadow-md text-shadow-ink/30'
 
   return (
     <>

@@ -1,5 +1,6 @@
 import { motion, useReducedMotion, useScroll, useTransform, type MotionValue } from 'framer-motion'
 import { Fragment, useRef, useState } from 'react'
+import Container from '../../../components/Container'
 import { LANDING } from './landingCopy'
 
 /**
@@ -18,14 +19,14 @@ export default function WordReveal() {
 
   return (
     // The carousel below gives the page enough scroll room for the reveal to finish.
-    <section aria-labelledby="why-timing" className="bg-bg px-5 py-28 sm:px-8 sm:py-40">
-      <div className="mx-auto max-w-4xl space-y-8">
-        <h2 id="why-timing" className="text-sm font-medium tracking-[0.18em] text-muted-text uppercase">
+    <section id={LANDING.nav.whyTiming.id} aria-labelledby="why-timing-title" className="section-y scroll-mt-16 bg-bg">
+      <Container className="space-y-3">
+        <h2 id="why-timing-title" className="eyebrow">
           {LANDING.revealLabel}
         </h2>
         <p
           ref={paragraphRef}
-          className="text-3xl leading-[1.18] font-light tracking-tight text-ink sm:text-5xl sm:leading-[1.12]"
+          className="text-[clamp(2rem,3.5vw,3rem)] leading-[1.15] font-medium tracking-tight text-pretty text-ink"
         >
           {words.map((word, i) => (
             <Fragment key={`${i}-${word}`}>
@@ -42,7 +43,7 @@ export default function WordReveal() {
             </Fragment>
           ))}
         </p>
-      </div>
+      </Container>
     </section>
   )
 }

@@ -101,13 +101,13 @@
 /* Phone: "Same care" above the window, "Smarter timing" below it. */
 .headline-left {
   position: absolute;
-  left: 1.25rem;
+  left: 1rem;
   bottom: calc(50% + var(--win-h) / 2 + 0.75rem);
 }
 
 .headline-right {
   position: absolute;
-  right: 1.25rem;
+  right: 1rem;
   top: calc(50% + var(--win-h) / 2 + 0.75rem);
   text-align: right;
 }

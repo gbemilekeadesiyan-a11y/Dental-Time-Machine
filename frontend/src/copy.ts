@@ -51,3 +51,16 @@ export const TAGLINE = 'Your dentist tells you what you need. We show you what h
 export const START_CTA = "See Maya's example"
 export const START_OWN_CARE = 'Enter my own care'
 export const GLOSSARY_HEADING = 'Words in your estimate'
+
+/** The shared header and its menu, on every page. */
+export const NAV = {
+  explore: 'Explore',
+  menu: 'Menu',
+  closeMenu: 'Close menu',
+  home: 'Home',
+  sectionsLabel: 'Sections',
+  pagesLabel: 'Pages',
+}
+
+/** Progress label for the step pages, in the header and above each title. */
+export const stepOf = (number: number, total: number) => `Step ${number} of ${total}`
