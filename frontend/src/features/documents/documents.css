@@ -1,0 +1,45 @@
+/*
+ * Looping scan animations for the document reveal (feature/documents).
+ * Plain CSS keyframes: they loop reliably and run on the compositor.
+ */
+
+/* A band a quarter of the page tall, swept from above the top to below the bottom. */
+.doc-scan-beam {
+  animation: doc-scan 1.6s ease-in-out infinite;
+  will-change: transform;
+}
+
+@keyframes doc-scan {
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(400%);
+  }
+}
+
+/* Scan corners breathe while reading. */
+.doc-scan-corners {
+  animation: doc-breathe 1.6s ease-in-out infinite;
+}
+
+@keyframes doc-breathe {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* No sweeping: a soft beam rests on the page and gently pulses. */
+  .doc-scan-beam {
+    animation: doc-breathe 2s ease-in-out infinite;
+    transform: translateY(150%);
+  }
+  .doc-scan-corners {
+    animation: none;
+  }
+}
