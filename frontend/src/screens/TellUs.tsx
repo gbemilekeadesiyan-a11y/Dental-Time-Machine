@@ -41,7 +41,11 @@ export default function TellUs({ state, dispatch, intake }: Props) {
       </div>
       {error && <Notice tone="problem">{error}</Notice>}
 
-      <DocumentIntake onConfirm={(plan, procedures) => applyDocument(dispatch, plan, procedures)} />
+      <DocumentIntake
+        onConfirm={(plan, procedures) => applyDocument(dispatch, plan, procedures)}
+        onRead={(document) => dispatch({ type: 'document_read', document })}
+        onAsk={(term) => dispatch({ type: 'ask_chat', text: askAboutDocument(term) })}
+      />
     </>
   )
 
@@ -60,6 +64,11 @@ export default function TellUs({ state, dispatch, intake }: Props) {
 }
 
 // ---------- document mount (feature/documents) ----------
+
+/** The question sent to the chat from the document reveal (a term card, or the whole document). */
+function askAboutDocument(term: string | null): string {
+  return term ? `Can you explain "${term}" from my document?` : 'Can you walk me through what my document says?'
+}
 
 /** Applies a confirmed document read. Only parts the document had are replaced. */
 function applyDocument(dispatch: Dispatch<Action>, plan: Plan | null, procedures: Procedure[]): string {

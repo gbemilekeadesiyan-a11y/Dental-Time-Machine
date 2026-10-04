@@ -3,7 +3,7 @@
  * (CLAUDE.md section 10: state lives in the browser session only).
  */
 
-import type { Language, Plan, Preferences, Procedure, Schedule } from './types'
+import type { DocumentReadResult, Language, Plan, Preferences, Procedure, Schedule } from './types'
 
 export interface AppState {
   procedures: Procedure[]
@@ -14,6 +14,10 @@ export interface AppState {
   isDemo: boolean
   /** Language, wording style and voice (feature/chat). Session only. */
   preferences: Preferences
+  /** What the reader found in the last uploaded document, not yet confirmed (feature/documents). Session only. */
+  document: DocumentReadResult | null
+  /** A question for the chat sent from elsewhere (e.g. a document term card); the chat sends it once. */
+  chatAsk: { id: number; text: string } | null
 }
 
 const LANGUAGES: readonly Language[] = ['en', 'es', 'fr', 'pt']
@@ -45,6 +49,8 @@ export const initialState: AppState = {
   schedule: {},
   isDemo: false,
   preferences: { language: browserLanguage(), style: 'simple', voice_on: false },
+  document: null,
+  chatAsk: null,
 }
 
 export type Action =
@@ -59,6 +65,11 @@ export type Action =
    * the plan; null leaves that part as it was. Only dispatched after the user confirms.
    */
   | { type: 'confirmed_intake'; procedures: Procedure[] | null; plan: Plan | null }
+  /** A document was read (feature/documents): the chat may talk about it. */
+  | { type: 'document_read'; document: DocumentReadResult }
+  /** Ask the chat a question on the user's behalf; the chat sends it and clears it. */
+  | { type: 'ask_chat'; text: string }
+  | { type: 'chat_ask_handled'; id: number }
 
 export function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
@@ -98,6 +109,15 @@ export function reducer(state: AppState, action: Action): AppState {
         schedule: action.procedures ? {} : state.schedule,
         isDemo: false,
       }
+
+    case 'document_read':
+      return { ...state, document: action.document }
+
+    case 'ask_chat':
+      return { ...state, chatAsk: { id: (state.chatAsk?.id ?? 0) + 1, text: action.text } }
+
+    case 'chat_ask_handled':
+      return state.chatAsk?.id === action.id ? { ...state, chatAsk: null } : state
 
     default: {
       const unreachable: never = action

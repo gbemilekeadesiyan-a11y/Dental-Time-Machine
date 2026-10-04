@@ -154,3 +154,29 @@ def call_with_tool(
         content=content,
     )
     return reply if reply.text or reply.tool_use_id else None
+
+
+def call_tool(
+    system: str,
+    messages: list[dict[str, Any]],
+    tool: dict[str, Any],
+    max_tokens: int = DEFAULT_MAX_TOKENS,
+) -> dict[str, Any] | None:
+    """Ask the model to fill one tool's input (forced tool use). Returns that input, or
+    None if anything goes wrong or the model doesn't call the tool.
+
+    tool is a Converse toolSpec entry: {"toolSpec": {"name": ..., "inputSchema": {"json": ...}}}.
+    Used by the document reader (feature/documents) to get structured fields back.
+    """
+    name = tool["toolSpec"]["name"]
+    content = _converse(
+        system=[{"text": system}],
+        messages=messages,
+        toolConfig={"tools": [tool], "toolChoice": {"tool": {"name": name}}},
+        inferenceConfig={"maxTokens": max_tokens, "temperature": 0},
+    )
+    for block in content or []:
+        tool_use = block.get("toolUse") if isinstance(block, dict) else None
+        if tool_use and tool_use.get("name") == name and isinstance(tool_use.get("input"), dict):
+            return tool_use["input"]
+    return None

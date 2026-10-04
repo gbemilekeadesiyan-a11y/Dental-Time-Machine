@@ -14,29 +14,21 @@ Safety:
 - Fees are what the document prints, shown on the confirm form to be checked.
 - The file is held in memory for the call only. Nothing is logged or saved.
 
-TEMPORARY: this file has its own small Bedrock client. Swap converse_bedrock()
-to Malama's shared app/ai/bedrock.py helper when it lands.
+Bedrock is called through the shared helper (app/ai/bedrock.py): one client,
+8 s timeouts, nothing logged.
 """
 
 from __future__ import annotations
 
 import math
-import os
 import re
 from collections.abc import Callable
-from functools import lru_cache
-from pathlib import Path
 from typing import Any
 
+from app.ai import bedrock
 from app.demo_data import CATALOG
 from app.models import MAX_FEE, MAX_PROCEDURES, MAX_TERMS_FOUND, Coverage, DocumentReadResult, Plan, Procedure
 
-# backend/.env holds the AWS keys (CLAUDE.md section 5). Never commit it.
-_ENV_FILE = Path(__file__).resolve().parents[2] / ".env"
-
-REGION = "us-east-1"
-DEFAULT_MODEL_ID = "us.anthropic.claude-haiku-4-5-20251001-v1:0"
-TIMEOUT_SECONDS = 8
 TOOL_NAME = "record_document_fields"
 
 NOTHING_FOUND_WARNING = (
@@ -170,41 +162,18 @@ def read_with_ai(
 # ---------- Bedrock call ----------
 
 
-@lru_cache(maxsize=1)
-def _client() -> Any:
-    import boto3
-    from botocore.config import Config
-    from dotenv import load_dotenv
-
-    load_dotenv(_ENV_FILE, override=False)
-    config = Config(
-        connect_timeout=3,
-        read_timeout=TIMEOUT_SECONDS,
-        retries={"max_attempts": 1, "mode": "standard"},
-    )
-    return boto3.client("bedrock-runtime", region_name=REGION, config=config)
-
-
 def converse_bedrock(data: bytes, kind: str) -> Any:
-    """One Converse call with a forced tool. Returns the tool's input (unchecked)."""
+    """One forced-tool call through the shared helper. Returns the tool's input (unchecked)."""
     fmt = _FORMATS[kind]
     if kind == "pdf":
         block = {"document": {"format": fmt, "name": "uploaded document", "source": {"bytes": data}}}
     else:
         block = {"image": {"format": fmt, "source": {"bytes": data}}}
-
-    response = _client().converse(
-        modelId=os.environ.get("BEDROCK_MODEL_ID", DEFAULT_MODEL_ID),
-        system=[{"text": SYSTEM_PROMPT}],
-        messages=[{"role": "user", "content": [block, {"text": USER_PROMPT}]}],
-        toolConfig={"tools": [TOOL_SPEC], "toolChoice": {"tool": {"name": TOOL_NAME}}},
-        inferenceConfig={"maxTokens": 2000, "temperature": 0},
-    )
-    for part in response.get("output", {}).get("message", {}).get("content", []):
-        tool_use = part.get("toolUse")
-        if tool_use and tool_use.get("name") == TOOL_NAME:
-            return tool_use.get("input")
-    raise ReaderError("no tool call")
+    messages = [{"role": "user", "content": [block, {"text": USER_PROMPT}]}]
+    raw = bedrock.call_tool(SYSTEM_PROMPT, messages, TOOL_SPEC, max_tokens=2000)
+    if raw is None:
+        raise ReaderError("no tool call")
+    return raw
 
 
 # ---------- checking the answer ----------
