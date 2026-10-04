@@ -19,9 +19,9 @@ export default function JargonChip({ term }: { term: GlossaryTerm }) {
         aria-controls={explanationId}
         onClick={() => setOpen((o) => !o)}
         className={
-          'inline-flex items-center gap-1 rounded-full border px-3 py-1 text-sm transition-colors ' +
-          'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange ' +
-          (open ? 'border-maroon bg-maroon text-white' : 'border-line bg-cream text-ink hover:border-maroon')
+          'inline-flex min-h-9 items-center gap-1.5 rounded-full border px-3.5 text-sm transition-colors ' +
+          'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ' +
+          (open ? 'border-primary bg-primary text-white' : 'border-muted bg-card/90 text-ink hover:border-primary')
         }
       >
         {entry.term}
@@ -30,7 +30,7 @@ export default function JargonChip({ term }: { term: GlossaryTerm }) {
         </span>
         <span className="sr-only">{open ? ', hide explanation' : ', what does this mean?'}</span>
       </button>
-      <p id={explanationId} hidden={!open} className="basis-full rounded-lg bg-cream p-3 text-sm text-ink">
+      <p id={explanationId} hidden={!open} className="basis-full rounded-2xl bg-card p-3 text-sm text-ink shadow-sm">
         {entry.explanation}
       </p>
     </>

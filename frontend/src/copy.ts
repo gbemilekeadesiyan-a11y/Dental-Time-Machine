@@ -45,3 +45,9 @@ export const NOTHING_CAN_WAIT =
   'Nothing is marked as able to wait yet. If your dentist says something can wait, tick it on Tell us to compare timings.'
 export const NO_BETTER_TIMING =
   "With what your dentist has confirmed so far, moving care to next year wouldn't lower what you'll likely pay."
+
+/** CLAUDE.md section 1. Exact wording. */
+export const TAGLINE = 'Your dentist tells you what you need. We show you what happens if you change when you get it.'
+export const START_CTA = "See Maya's example"
+export const START_OWN_CARE = 'Enter my own care'
+export const GLOSSARY_HEADING = 'Words in your estimate'

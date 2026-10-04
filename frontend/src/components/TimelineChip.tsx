@@ -1,6 +1,7 @@
 import { motion, useReducedMotion, type PanInfo } from 'framer-motion'
 import { LOCKED_HELP, LOCKED_LABEL, MOVE_TO_NEXT_YEAR, MOVE_TO_THIS_YEAR } from '../copy'
 import { formatMoney } from '../format'
+import { ArrowLeft, ArrowRight, LockIcon } from './Icons'
 import type { Year } from '../types'
 
 interface Props {
@@ -42,45 +43,36 @@ export default function TimelineChip({ id, label, year, canMove, youPay, note, o
         onDrop(id, toViewport(info))
       }}
       className={
-        'relative list-none space-y-2 rounded-xl border p-3 shadow-sm ' +
-        (canMove ? 'cursor-grab border-line bg-surface' : 'border-line bg-cream')
+        'relative list-none space-y-2 rounded-2xl p-4 ring-1 ring-ink/5 ' +
+        (canMove ? 'cursor-grab bg-card shadow-md shadow-primary/10' : 'bg-bg')
       }
     >
       <div className="flex items-start justify-between gap-2">
         <span className="font-semibold text-ink">{label}</span>
         {youPay !== undefined && (
-          <span className="text-sm tabular-nums text-muted">you&apos;ll likely pay {formatMoney(youPay)}</span>
+          <span className="text-sm tabular-nums text-muted-text">you&apos;ll likely pay {formatMoney(youPay)}</span>
         )}
       </div>
-      {note && <p className="text-xs text-muted">{note}</p>}
+      {note && <p className="text-xs text-muted-text">{note}</p>}
 
       {canMove ? (
         <button
           type="button"
           onClick={() => onMove(id, other)}
-          className="min-h-9 rounded-lg border border-maroon px-3 py-1.5 text-sm font-medium text-maroon hover:bg-maroon hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange"
+          className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-primary bg-card px-4 text-sm font-medium text-primary transition-colors hover:bg-primary hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
           {other === 'next_year' ? MOVE_TO_NEXT_YEAR : MOVE_TO_THIS_YEAR}
-          <span aria-hidden="true">{other === 'next_year' ? ' →' : ' ←'}</span>
+          {other === 'next_year' ? <ArrowRight /> : <ArrowLeft />}
         </button>
       ) : (
         <div className="space-y-1">
-          <p className="flex items-center gap-1.5 text-sm font-medium text-muted">
+          <p className="flex items-center gap-1.5 text-sm font-medium text-muted-text">
             <LockIcon />
             {LOCKED_LABEL}
           </p>
-          <p className="text-xs text-muted">{LOCKED_HELP}</p>
+          <p className="text-xs text-muted-text">{LOCKED_HELP}</p>
         </div>
       )}
     </motion.li>
-  )
-}
-
-function LockIcon() {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 16 16" className="size-4 fill-none stroke-current" strokeWidth="1.6">
-      <rect x="3" y="7" width="10" height="7" rx="1.5" />
-      <path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" strokeLinecap="round" />
-    </svg>
   )
 }

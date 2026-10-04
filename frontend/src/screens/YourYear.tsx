@@ -45,10 +45,10 @@ export default function YourYear({ state, onEditCare }: Props) {
   return (
     <section aria-labelledby="your-year-title" className="space-y-6">
       <div className="space-y-2">
-        <h2 id="your-year-title" className="text-2xl font-semibold text-maroon">
+        <h2 id="your-year-title" className="text-4xl font-light tracking-tight text-ink sm:text-5xl">
           Your year
         </h2>
-        <p className="text-muted">
+        <p className="text-ink/80">
           {movedCount === 0
             ? 'Based on getting all of your care this plan year.'
             : `Based on the timing you chose, with ${movedCount} ${movedCount === 1 ? 'procedure' : 'procedures'} in next plan year.`}
@@ -58,34 +58,34 @@ export default function YourYear({ state, onEditCare }: Props) {
       {procedures.length === 0 ? (
         <Notice>
           Add your care first.{' '}
-          <button type="button" onClick={onEditCare} className="font-medium text-maroon underline">
+          <button type="button" onClick={onEditCare} className="font-medium text-primary underline underline-offset-2">
             Go to Tell us
           </button>
         </Notice>
       ) : !current ? (
-        <div className="h-64 animate-pulse rounded-xl bg-cream motion-reduce:animate-none" role="status" aria-label="Working out your year" />
+        <div className="glass h-64 animate-pulse rounded-3xl motion-reduce:animate-none" role="status" aria-label="Working out your year" />
       ) : !answer.outcome.ok ? (
         <Notice tone="problem">
           {answer.outcome.message}{' '}
-          <button type="button" onClick={onEditCare} className="font-medium text-maroon underline">
+          <button type="button" onClick={onEditCare} className="font-medium text-primary underline underline-offset-2">
             Check your details
           </button>
         </Notice>
       ) : (
-        <div className="grid items-center gap-6 rounded-xl bg-cream p-5 sm:grid-cols-[auto_1fr]">
+        <div className="glass grid items-center gap-8 rounded-3xl p-6 sm:grid-cols-[auto_1fr] sm:p-8">
           <MaxRing left={answer.outcome.result.max_left.this_year} annualMax={plan.annual_max} />
           <div className="space-y-4">
             <dl className="space-y-4" aria-live="polite">
               <div>
-                <dt className="text-sm text-muted">You&apos;ll likely pay</dt>
+                <dt className="text-sm text-muted-text">You&apos;ll likely pay</dt>
                 <dd>
-                  <AnimatedMoney value={answer.outcome.result.totals.you_pay} className="text-3xl font-bold text-ink" />
+                  <AnimatedMoney value={answer.outcome.result.totals.you_pay} className="text-5xl font-light tracking-tight text-ink" />
                 </dd>
               </div>
               <div>
-                <dt className="text-sm text-muted">Your plan likely pays</dt>
+                <dt className="text-sm text-muted-text">Your plan likely pays</dt>
                 <dd>
-                  <AnimatedMoney value={answer.outcome.result.totals.plan_pays} className="text-xl font-semibold text-savings" />
+                  <AnimatedMoney value={answer.outcome.result.totals.plan_pays} className="text-2xl font-medium tracking-tight text-savings-deep" />
                 </dd>
               </div>
             </dl>

@@ -28,7 +28,7 @@ export default function MaxRing({ left, annualMax }: Props) {
     <figure className="flex flex-col items-center gap-3">
       <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`} role="img" aria-label={label}>
         {/* Used: the full track. Left: drawn on top in green. */}
-        <circle cx={SIZE / 2} cy={SIZE / 2} r={RADIUS} fill="none" strokeWidth={STROKE} className="stroke-maroon/25" />
+        <circle cx={SIZE / 2} cy={SIZE / 2} r={RADIUS} fill="none" strokeWidth={STROKE} className="stroke-track" />
         <motion.circle
           cx={SIZE / 2}
           cy={SIZE / 2}
@@ -42,19 +42,19 @@ export default function MaxRing({ left, annualMax }: Props) {
           animate={{ pathLength: share }}
           transition={{ duration: reduceMotion ? 0 : 0.6, ease: 'easeOut' }}
         />
-        <text x="50%" y="47%" textAnchor="middle" className="fill-ink text-2xl font-bold">
+        <text x="50%" y="47%" textAnchor="middle" className="fill-ink text-3xl font-light tracking-tight">
           {formatMoney(left)}
         </text>
-        <text x="50%" y="62%" textAnchor="middle" className="fill-muted text-sm">
+        <text x="50%" y="62%" textAnchor="middle" className="fill-muted-text text-sm">
           left this year
         </text>
       </svg>
-      <figcaption className="flex flex-wrap justify-center gap-x-4 gap-y-1 text-sm text-muted">
+      <figcaption className="flex flex-wrap justify-center gap-x-4 gap-y-1 text-sm text-muted-text">
         <span className="inline-flex items-center gap-1.5">
           <span aria-hidden="true" className="size-3 rounded-full bg-savings" /> Left
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <span aria-hidden="true" className="size-3 rounded-full bg-maroon/25" /> Used
+          <span aria-hidden="true" className="size-3 rounded-full bg-track ring-1 ring-muted/40" /> Used
         </span>
         <span>of your {formatMoney(annualMax)} annual maximum</span>
       </figcaption>

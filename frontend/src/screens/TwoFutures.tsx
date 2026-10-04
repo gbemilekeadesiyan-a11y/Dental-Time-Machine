@@ -33,7 +33,7 @@ export default function TwoFutures({ state, dispatch, onEditCare }: Props) {
       <Screen>
         <Notice>
           Add your care first.{' '}
-          <button type="button" onClick={onEditCare} className="font-medium text-maroon underline">
+          <button type="button" onClick={onEditCare} className="font-medium text-primary underline underline-offset-2">
             Go to Tell us
           </button>
         </Notice>
@@ -53,10 +53,10 @@ function Screen({ children }: { children: ReactNode }) {
   return (
     <section aria-labelledby="two-futures-title" className="space-y-8">
       <div className="space-y-2">
-        <h2 id="two-futures-title" className="text-2xl font-semibold text-maroon">
+        <h2 id="two-futures-title" className="text-4xl font-light tracking-tight text-ink sm:text-5xl">
           Two futures
         </h2>
-        <p className="text-muted">See what changes if some of your care happens after your plan resets.</p>
+        <p className="text-ink/80">See what changes if some of your care happens after your plan resets.</p>
       </div>
       {children}
       <Disclaimer />
@@ -84,12 +84,12 @@ function Futures({ procedures, plan, onEditCare }: { procedures: Procedure[]; pl
   }, [procedures, plan])
 
   const current = answer?.procedures === procedures && answer.plan === plan
-  if (!current) return <div className="h-48 animate-pulse rounded-xl bg-cream motion-reduce:animate-none" role="status" aria-label="Comparing timings" />
+  if (!current) return <div className="glass h-48 animate-pulse rounded-3xl motion-reduce:animate-none" role="status" aria-label="Comparing timings" />
   if (!answer.outcome.ok) {
     return (
       <Notice tone="problem">
         {answer.outcome.message}{' '}
-        <button type="button" onClick={onEditCare} className="font-medium text-maroon underline">
+        <button type="button" onClick={onEditCare} className="font-medium text-primary underline underline-offset-2">
           Check your details
         </button>
       </Notice>
@@ -110,44 +110,59 @@ function Futures({ procedures, plan, onEditCare }: { procedures: Procedure[]; pl
   }
 
   return (
-    <div className="space-y-3" aria-live="polite">
-      <FutureRow title="Everything now" detail="All of your care in this plan year" youPay={all_now.totals.you_pay} />
-      <FutureRow
-        title="Best schedule"
-        detail={moved.length > 0 ? `Moves ${moved.length} to next plan year` : 'Same timing as everything now'}
-        youPay={best.totals.you_pay}
-        savings={savings}
-        highlight={savings > 0}
-      />
-      <p className="text-ink">{sentence}</p>
+    <div className="space-y-4" aria-live="polite">
+      <div className="grid gap-4 md:grid-cols-2">
+        <FutureCard
+          variant="glass"
+          title="Everything now"
+          detail="All of your care in this plan year"
+          youPay={all_now.totals.you_pay}
+        />
+        <FutureCard
+          variant="gradient"
+          title="Best schedule"
+          detail={moved.length > 0 ? `Moves ${moved.length} to next plan year` : 'Same timing as everything now'}
+          youPay={best.totals.you_pay}
+          savings={savings}
+        />
+      </div>
+      <p className="text-lg text-ink">{sentence}</p>
     </div>
   )
 }
 
-function FutureRow(props: { title: string; detail: string; youPay: number; savings?: number; highlight?: boolean }) {
+interface FutureCardProps {
+  variant: 'glass' | 'gradient'
+  title: string
+  detail: string
+  youPay: number
+  savings?: number
+}
+
+/** One future. "glass" is the plain card; "gradient" is the highlighted Best schedule card. */
+function FutureCard({ variant, title, detail, youPay, savings }: FutureCardProps) {
+  const onGradient = variant === 'gradient'
   return (
-    <div
-      className={
-        'flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4 ' +
-        (props.highlight ? 'border-savings/40 bg-savings-bg' : 'border-line bg-surface')
-      }
-    >
-      <div>
-        <h3 className="font-semibold text-ink">{props.title}</h3>
-        <p className="text-sm text-muted">{props.detail}</p>
+    <article className={'flex flex-col gap-6 rounded-3xl p-6 ' + (onGradient ? 'gradient-card' : 'glass')}>
+      <div className="relative">
+        <h3 className={'text-lg font-semibold ' + (onGradient ? 'text-white' : 'text-ink')}>{title}</h3>
+        <p className={'text-sm ' + (onGradient ? 'text-white' : 'text-muted-text')}>{detail}</p>
       </div>
-      <div className="flex flex-wrap items-center gap-3">
-        <p className="text-right">
-          <span className="block text-xs text-muted">You&apos;ll likely pay</span>
-          <AnimatedMoney value={props.youPay} className="text-3xl font-bold text-ink" />
+      <div className="relative mt-auto flex flex-wrap items-end justify-between gap-3">
+        <p>
+          <span className={'block text-sm ' + (onGradient ? 'text-white' : 'text-muted-text')}>You&apos;ll likely pay</span>
+          <AnimatedMoney
+            value={youPay}
+            className={'text-5xl font-light tracking-tight ' + (onGradient ? 'text-white' : 'text-ink')}
+          />
         </p>
-        {props.savings !== undefined && props.savings > 0 && (
-          <span className="inline-flex items-center gap-1 rounded-full bg-savings px-3 py-1 text-sm font-semibold text-white">
-            Saves <AnimatedMoney value={props.savings} />
+        {savings !== undefined && savings > 0 && (
+          <span className="inline-flex items-center gap-1 rounded-full bg-savings-deep px-3.5 py-1.5 text-sm font-semibold text-white ring-1 ring-white/40">
+            Saves <AnimatedMoney value={savings} />
           </span>
         )}
       </div>
-    </div>
+    </article>
   )
 }
 
@@ -234,18 +249,18 @@ function Timeline({ state, dispatch }: { state: AppState; dispatch: Dispatch<Act
   }
 
   return (
-    <div className="space-y-4">
+    <div className="glass space-y-5 rounded-3xl p-5 sm:p-6">
       <div className="space-y-1">
-        <h3 className="text-lg font-semibold text-ink">Try a different timing</h3>
-        <p className="text-sm text-muted">
+        <h3 className="text-xl font-semibold tracking-tight text-ink">Try a different timing</h3>
+        <p className="text-sm text-muted-text">
           Drag care that can wait across the wall, or use its button. Locked care stays where it is.
         </p>
       </div>
 
-      <div className="rounded-xl bg-cream p-4" aria-live="polite" aria-busy={updating}>
+      <div className="rounded-2xl bg-card p-4 shadow-sm ring-1 ring-ink/5" aria-live="polite" aria-busy={updating}>
         <p className="text-lg text-ink">
           With this timing, you&apos;ll likely pay{' '}
-          {result ? <AnimatedMoney value={result.totals.you_pay} className="text-2xl font-bold" /> : '…'}
+          {result ? <AnimatedMoney value={result.totals.you_pay} className="text-3xl font-light tracking-tight" /> : '…'}
         </p>
         {updating && <span className="sr-only">Updating</span>}
       </div>
@@ -260,7 +275,7 @@ function Timeline({ state, dispatch }: { state: AppState; dispatch: Dispatch<Act
         </div>
       </LayoutGroup>
 
-      <p className="text-sm text-muted">{RESET_WORDING}</p>
+      <p className="text-sm text-muted-text">{RESET_WORDING}</p>
     </div>
   )
 }
@@ -287,14 +302,14 @@ function YearColumn({ ref, year, title, maxLeft, procedures, yearOf, labels, lin
     <div
       ref={ref}
       className={
-        'min-h-40 space-y-3 rounded-xl border-2 border-dashed p-3 transition-colors ' +
-        (hoverYear === year ? 'border-maroon bg-cream' : 'border-transparent')
+        'min-h-40 space-y-3 rounded-2xl border-2 border-dashed p-3 transition-colors ' +
+        (hoverYear === year ? 'border-primary bg-primary/5' : 'border-transparent')
       }
     >
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h4 className="font-semibold text-ink">{title}</h4>
         {maxLeft !== undefined && (
-          <p className="text-xs text-muted">
+          <p className="text-xs text-muted-text">
             Annual maximum left: <AnimatedMoney value={maxLeft} />
           </p>
         )}
@@ -313,7 +328,7 @@ function YearColumn({ ref, year, title, maxLeft, procedures, yearOf, labels, lin
           />
         ))}
       </ul>
-      {here.length === 0 && <p className="text-sm text-muted">Nothing scheduled here yet.</p>}
+      {here.length === 0 && <p className="text-sm text-muted-text">Nothing scheduled here yet.</p>}
     </div>
   )
 }
@@ -323,8 +338,8 @@ function ResetWall({ resetsOn }: { resetsOn: string | null }) {
   const label = resetsOn ? `Plan resets ${resetsOn}` : 'Plan resets'
   return (
     <div className="relative flex items-center justify-center py-2 md:px-1 md:py-0" role="separator" aria-label={label}>
-      <div aria-hidden="true" className="absolute inset-x-0 top-1/2 border-t-2 border-dashed border-orange md:inset-x-auto md:inset-y-0 md:left-1/2 md:top-0 md:border-t-0 md:border-l-2" />
-      <span aria-hidden="true" className="relative rounded-full bg-orange px-3 py-1 text-xs font-semibold whitespace-nowrap text-white md:[writing-mode:vertical-rl] md:px-1 md:py-3">
+      <div aria-hidden="true" className="absolute inset-x-0 top-1/2 border-t-2 border-dashed border-primary/60 md:inset-x-auto md:inset-y-0 md:left-1/2 md:top-0 md:border-t-0 md:border-l-2" />
+      <span aria-hidden="true" className="relative rounded-full bg-primary px-3 py-1 text-xs font-semibold whitespace-nowrap text-white shadow-md shadow-primary/30 md:[writing-mode:vertical-rl] md:px-1.5 md:py-3">
         {label}
       </span>
     </div>
