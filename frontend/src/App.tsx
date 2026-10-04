@@ -1,6 +1,7 @@
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
-import { useEffect, useReducer, useState } from 'react'
+import { AnimatePresence, motion, useReducedMotion, type Variants } from 'framer-motion'
+import { useReducer, useState } from 'react'
 import { ArrowLeft, ArrowRight } from './components/Icons'
+import Logo from './components/Logo'
 import StepIndicator from './components/StepIndicator'
 import FindCare from './features/filters/FindCare'
 import TellUs from './screens/TellUs'
@@ -31,17 +32,54 @@ const SCREENS = [
 
 type ScreenIndex = 0 | 1 | 2 | 3 | 4 | 5
 type View = 'start' | ScreenIndex
+/** 1 when moving forward through the flow, -1 when going back. */
+type Direction = 1 | -1
 const LAST: ScreenIndex = 5
 
+/** Where a view sits in the flow, so a move can tell forward from back. The landing is first. */
+const rank = (v: View) => (v === 'start' ? -1 : v)
+
+/** Quick start, long soft landing. */
+const EASE_OUT = [0.22, 1, 0.36, 1] as const
+
+/** Steps fade and slide a little in the direction of travel. */
+const stepSlide: Variants = {
+  enter: (dir: Direction) => ({ opacity: 0, x: 32 * dir }),
+  center: { opacity: 1, x: 0, transition: { duration: 0.4, ease: EASE_OUT } },
+  exit: (dir: Direction) => ({ opacity: 0, x: -32 * dir, transition: { duration: 0.2, ease: 'easeIn' } }),
+}
+
+/**
+ * Landing to steps and back: a fade only. A transform here would pin the landing's
+ * fixed top bar to this wrapper while it fades.
+ */
+const pageFade: Variants = {
+  enter: { opacity: 0 },
+  center: { opacity: 1, transition: { duration: 0.45, ease: EASE_OUT } },
+  exit: { opacity: 0, transition: { duration: 0.25, ease: 'easeIn' } },
+}
+
+/** Under reduced motion every page change is a short cross-fade with no movement. */
+const quickFade: Variants = {
+  enter: { opacity: 0 },
+  center: { opacity: 1, transition: { duration: 0.15 } },
+  exit: { opacity: 0, transition: { duration: 0.1 } },
+}
+
+/** The old page has faded out, so the jump to the top is never seen. */
+const toTop = () => window.scrollTo({ top: 0, behavior: 'instant' })
+
 export default function App() {
-  const [view, setView] = useState<View>('start')
+  const [{ view, dir }, setNav] = useState<{ view: View; dir: Direction }>({ view: 'start', dir: 1 })
   const [state, dispatch] = useReducer(reducer, initialState)
   const reduceMotion = useReducedMotion()
 
-  // Navigation (feature/summary): every step opens at its top, not where the last one was scrolled.
-  useEffect(() => {
-    window.scrollTo({ top: 0 })
-  }, [view])
+  /** Moves to another view and remembers which way we went, for the slide. */
+  const go = (to: View | ((from: View) => View)) =>
+    setNav((cur) => {
+      const next = typeof to === 'function' ? to(cur.view) : to
+      return next === cur.view ? cur : { view: next, dir: rank(next) > rank(cur.view) ? 1 : -1 }
+    })
 
   function renderScreen(current: ScreenIndex) {
     switch (current) {
@@ -54,72 +92,85 @@ export default function App() {
           </div>
         )
       case 1:
-        return <WhatItMeans state={state} onEditCare={() => setView(0)} />
+        return <WhatItMeans state={state} onEditCare={() => go(0)} />
       case 2:
-        return <TwoFutures state={state} dispatch={dispatch} onEditCare={() => setView(0)} />
+        return <TwoFutures state={state} dispatch={dispatch} onEditCare={() => go(0)} />
       case 3:
         return (
           <div className="space-y-6">
-            <SummaryScreen state={state} onEditCare={() => setView(0)} />
+            <SummaryScreen state={state} onEditCare={() => go(0)} />
             {/* Mount point (feature/chat): the chatbot recap under the visual summary. */}
             <ChatSummary state={state} />
           </div>
         )
       case 4:
-        return <FindCare state={state} onEditCare={() => setView(0)} />
+        return <FindCare state={state} onEditCare={() => go(0)} />
       case 5:
-        return <YourYear state={state} onEditCare={() => setView(0)} />
+        return <YourYear state={state} onEditCare={() => go(0)} />
     }
   }
 
-  const goBack = () => setView((v) => (v === 'start' ? v : v === 0 ? 'start' : ((v - 1) as ScreenIndex)))
-  const goNext = () => setView((v) => (v === 'start' ? 0 : v < LAST ? ((v + 1) as ScreenIndex) : v))
+  const goBack = () => go((v) => (v === 'start' ? v : v === 0 ? 'start' : ((v - 1) as ScreenIndex)))
+  const goNext = () => go((v) => (v === 'start' ? 0 : v < LAST ? ((v + 1) as ScreenIndex) : v))
 
-  // Mount point (feature/timeline): the landing page is full-width, outside the step layout.
-  if (view === 'start') return <Landing dispatch={dispatch} onStart={() => setView(0)} />
+  const page = reduceMotion ? quickFade : pageFade
+  const step = reduceMotion ? quickFade : stepSlide
 
   return (
-    <>
-      <BackgroundBlobs />
-      <div className="mx-auto flex min-h-screen max-w-4xl flex-col gap-8 px-4 py-6 sm:px-6 sm:py-8">
-        <header className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-sm font-semibold tracking-tight text-ink">Dental Time Machine</h1>
-          <StepIndicator steps={SCREENS} current={view} onSelect={(i) => setView(i as ScreenIndex)} />
-          {/* Mount point (feature/chat): language, style and voice. */}
-          <PreferencesPicker preferences={state.preferences} dispatch={dispatch} />
-        </header>
+    <AnimatePresence mode="wait" initial={false} onExitComplete={toTop}>
+      {view === 'start' ? (
+        // Mount point (feature/timeline): the landing page is full-width, outside the step layout.
+        <motion.div key="landing" variants={page} initial="enter" animate="center" exit="exit">
+          <Landing dispatch={dispatch} onStart={() => go(0)} />
+        </motion.div>
+      ) : (
+        // overflow-x-clip: a step sliding in never adds a sideways scrollbar.
+        <motion.div key="steps" className="overflow-x-clip" variants={page} initial="enter" animate="center" exit="exit">
+          <BackgroundBlobs />
+          <div className="mx-auto flex min-h-screen max-w-4xl flex-col gap-8 px-4 py-6 sm:px-6 sm:py-8">
+            <header className="flex flex-wrap items-center justify-between gap-3">
+              <h1 className="text-ink">
+                <Logo />
+              </h1>
+              <StepIndicator steps={SCREENS} current={view} onSelect={(i) => go(i as ScreenIndex)} />
+              {/* Mount point (feature/chat): language, style and voice. */}
+              <PreferencesPicker preferences={state.preferences} dispatch={dispatch} />
+            </header>
 
-        <main className="flex-1">
-          <AnimatePresence mode="wait" initial={false}>
-            <motion.div
-              key={SCREENS[view].id}
-              initial={reduceMotion ? false : { opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={reduceMotion ? { opacity: 1 } : { opacity: 0, y: -10 }}
-              transition={{ duration: 0.22, ease: 'easeOut' }}
-            >
-              {renderScreen(view)}
-            </motion.div>
-          </AnimatePresence>
-        </main>
+            <main className="flex-1">
+              <AnimatePresence mode="wait" initial={false} custom={dir} onExitComplete={toTop}>
+                <motion.div
+                  key={SCREENS[view].id}
+                  custom={dir}
+                  variants={step}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
+                >
+                  {renderScreen(view)}
+                </motion.div>
+              </AnimatePresence>
+            </main>
 
-        {/* Navigation (feature/summary): Back and Next stay on screen, so long steps need no scrolling to move on. */}
-        <footer className="glass sticky bottom-3 z-20 flex justify-between gap-3 rounded-full p-2">
-          <button type="button" onClick={goBack} className="btn-secondary">
-            <RollLabel>
-              <ArrowLeft />
-              Back
-            </RollLabel>
-          </button>
-          <button type="button" onClick={goNext} disabled={view === LAST} className="btn-primary">
-            <RollLabel>
-              Next
-              <ArrowRight />
-            </RollLabel>
-          </button>
-        </footer>
-      </div>
-    </>
+            {/* Navigation (feature/summary): Back and Next stay on screen, so long steps need no scrolling to move on. */}
+            <footer className="glass sticky bottom-3 z-20 flex justify-between gap-3 rounded-full p-2">
+              <button type="button" onClick={goBack} className="btn-secondary">
+                <RollLabel>
+                  <ArrowLeft />
+                  Back
+                </RollLabel>
+              </button>
+              <button type="button" onClick={goNext} disabled={view === LAST} className="btn-primary">
+                <RollLabel>
+                  Next
+                  <ArrowRight />
+                </RollLabel>
+              </button>
+            </footer>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   )
 }
 
