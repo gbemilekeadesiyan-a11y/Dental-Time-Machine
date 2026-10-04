@@ -1,8 +1,9 @@
 """Feature shapes from CLAUDE.md section 6 ("Feature additions").
 
-Shapes only: the engine doesn't compute cash_comparison, alternatives or the
-budget filter yet. These tests check that:
-1. Maya's existing JSON is unchanged (new optional fields stay out of responses until set).
+The engine computes cash_comparison (tests in test_summary.py); it doesn't compute
+alternatives or the budget filter yet. These tests check that:
+1. Maya's existing JSON is unchanged (new optional fields stay out of responses until set;
+   cash_comparison is the one the engine now sets).
 2. Each new shape accepts valid data and rejects bad data with a 422 or ValidationError.
 
 Fees reuse the section 9 figures from demo_data; caps come from models.py.
@@ -61,9 +62,9 @@ class TestMayaUnchanged:
         assert all(set(p) == PROCEDURE_KEYS for p in data["procedures"])
         assert set(data["plan"]) == PLAN_KEYS
 
-    def test_calculate_has_no_cash_comparison_yet(self, client):
+    def test_calculate_adds_only_cash_comparison(self, client):
         data = client.post("/calculate", json=maya_json()).json()
-        assert set(data) == {"per_procedure", "totals", "max_left", "warnings"}
+        assert set(data) == {"per_procedure", "totals", "max_left", "warnings", "cash_comparison"}
         assert data["totals"] == {"plan_pays": 1500, "you_pay": 2500}
 
     def test_optimize_has_no_alternatives_yet(self, client):
@@ -73,9 +74,9 @@ class TestMayaUnchanged:
         assert data["moved"] == ["crown2"]
         assert data["savings"] == 525
 
-    def test_engine_results_leave_new_fields_unset(self):
+    def test_engine_sets_cash_comparison_and_leaves_alternatives_unset(self):
         result = calculate(maya_procedures(), maya_plan(), {})
-        assert result.cash_comparison is None
+        assert result.cash_comparison is not None
         opt = optimize(maya_procedures(), maya_plan())
         assert opt.alternatives is None
 

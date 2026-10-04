@@ -109,7 +109,8 @@ def test_calculate_without_schedule_means_all_now(client):
 
 def test_result_shape_matches_section_6(client):
     data = client.post("/calculate", json=maya_body()).json()
-    assert set(data) == {"per_procedure", "totals", "max_left", "warnings"}
+    # cash_comparison is the optional section 6 feature addition, computed by the engine.
+    assert set(data) == {"per_procedure", "totals", "max_left", "warnings", "cash_comparison"}
     assert set(data["max_left"]) == {"this_year", "next_year"}
     assert set(data["per_procedure"][0]) == {
         "id", "year", "billed_fee", "allowed_fee", "deductible_applied", "plan_pays", "you_pay", "reasons",
