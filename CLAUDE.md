@@ -30,10 +30,10 @@ The AI talks. The engine counts.
 backend/
   app/
     main.py            # app, CORS, include_router lines only (one line per feature)
-    models.py          # Pydantic shapes (section 6). CORE TEAM ONLY
-    engine.py          # cost engine. CORE TEAM ONLY
-    optimizer.py       # schedule optimizer. CORE TEAM ONLY
-    demo_data.py       # Maya, catalog, demo plan options. CORE TEAM ONLY
+    models.py          # Pydantic shapes (section 6). SHARED: change on your branch, flag it in the PR
+    engine.py          # cost engine. SHARED: change on your branch, section 9 tests must stay green
+    optimizer.py       # schedule optimizer. SHARED: same rule as engine.py
+    demo_data.py       # Maya, catalog, demo plan options. SHARED: never change Maya's section 9 values
     sockets.py         # fake parse/explain/read_document/summary (fallbacks, keep forever)
     ai/
       bedrock.py       # one shared Bedrock client + call helper (Malama owns, others import)
@@ -46,7 +46,7 @@ backend/
   tests/               # test_engine.py, test_api.py, plus test_<feature>.py per feature
 frontend/
   src/
-    types.ts           # mirrors models.py exactly. CORE TEAM ONLY (request additions)
+    types.ts           # mirrors models.py exactly. SHARED: update together with models.py
     api.ts             # every fetch call lives here; each feature adds its own section
     glossary.ts
     screens/           # TellUs, WhatItMeans, TwoFutures, YourYear (MVP, core team)
@@ -59,7 +59,7 @@ frontend/
       timeline/        # Samuel
 docs/
 ```
-Rule: you may only edit files in your own feature folders, plus one line in main.py (include_router) and one mount point in the app. Anything in a CORE TEAM ONLY file is requested from Samuel, not edited.
+Rule: on your own feature branch you may edit any file you need, including shared files. Prefer your own feature folders; when you touch a SHARED file, keep the change small, keep existing shapes and API routes working, and list it in your PR under "Shared files changed". Only main is protected: nobody pushes to main directly; Samuel reviews and merges every PR (section 15).
 
 ## 5. Commands
 - Backend: `cd backend && .venv\Scripts\Activate.ps1` (Windows) then `uvicorn app.main:app --reload` (port 8000)
@@ -78,7 +78,7 @@ Core (frozen):
 - OptimizeResult: all_now (Result), best (Result), best_schedule (Schedule), savings, moved [procedure_id]
 - CatalogItem: cdt_code, name, category, default_fee
 
-Feature additions (approved, all optional, added to models.py/types.ts by the core team):
+Feature additions (approved, all optional; any teammate may add them on their branch, flagged in the PR):
 - Preferences (session only): language ("en"|"es"|"fr"|"pt"), style ("simple"|"detailed"|"numbers"), voice_on (bool)
 - ChatTurn: role ("user"|"assistant"), text
 - ChatRequest: turns [ChatTurn], preferences, procedures [Procedure], plan (Plan|null)
@@ -114,7 +114,7 @@ Feature additions (approved):
 | POST | /filters/apply | {filters, procedures, plan_options} | ranked [PlanOption + your_cost from engine] | Kuwa |
 Errors: 422 with a plain message; never 500 for bad user input. Every AI route falls back to its fake in sockets.py on any AWS error or timeout (8 s).
 
-## 8. Engine rules (v1, core team only)
+## 8. Engine rules (v1; anyone may extend on their branch, tests first)
 Per plan year, process procedures by category (preventive, basic, major), each after the one it depends on, then by id.
 1. Deductible once per plan year (minus deductible_paid_this_year), skipped for categories in deductible_waived_for.
 2. plan_share = (allowed_fee - deductible_applied) x coverage[category]
@@ -150,7 +150,7 @@ Malama (branch feature/chat): personalization, language understanding, voice cha
 - Voice: push-to-talk with Web Speech API (lang matches preferences), Polly voice per language. Show the transcript. Text input always available.
 - Owns ai/bedrock.py and ai/dollar_guard.py (shared by Chuck and Iyin).
 
-Chuks (branch feature/documents): document upload and AI reading
+Chuck (branch feature/documents): document upload and AI reading
 - Upload a benefits summary, plan page, or dentist treatment estimate (pdf/jpg/png, max 5 MB, resized in browser).
 - Bedrock vision model extracts Plan fields and/or Procedures (CDT code must be in the catalog whitelist; fees from the document are kept only after the user confirms them).
 - Always lands on an editable confirm form showing what was found and what was not. Never auto-applies.
@@ -158,7 +158,7 @@ Chuks (branch feature/documents): document upload and AI reading
 
 Iyin (branch feature/summary): summary visualization + cash vs insurance
 - Rebuilds the summary block: totals, plan vs you, max used/left, savings, per-procedure breakdown (Recharts allowed).
-- Cash vs insurance panel: shows CashComparison from the engine (requested from Samuel). Never computes money in the frontend beyond displaying engine fields. Shows assumptions (e.g. "premiums not included").
+- Cash vs insurance panel: shows CashComparison from the engine (Iyin may add it to engine.py on her branch, tests first, or ask Samuel). Never computes money in the frontend beyond displaying engine fields. Shows assumptions (e.g. "premiums not included").
 - Wording stays conditional and calm; savings green, no red.
 
 Kuwa (branch feature/filters): rule-based filters
@@ -166,7 +166,7 @@ Kuwa (branch feature/filters): rule-based filters
 - Plans: compares the employer's demo plan options (/plans) for the user's procedures; each option's cost comes from the engine (/filters/apply calls engine.calculate/optimize). Do not rank or rate real insurance companies; no fake ratings or reviews.
 - Dentists: /dentists uses the CMS NPI Registry API by zip (free, official); network status, languages, accepting_new are labeled demo data.
 - Age range only changes which rules/warnings show (e.g. under 18 pediatric note); it never changes prices unless a plan option defines it.
-- Budget filter: "keep this year's cost under $X" passes a constraint to /optimize via the core team (request it; do not edit optimizer.py).
+- Budget filter: "keep this year's cost under $X" passes budget_this_year to /optimize (Kuwa may add this to optimizer.py on his branch, tests first).
 
 ## 11. Design system (Samuel owns tokens; everyone uses them)
 Tailwind tokens: primary #3C4AA1, primary-deep #3542A2, gradient #647CBF -> #3D4FA7, savings #589C7D, bg #F6F6F6, card #FFFFFF, ink #1B1D24, muted #8D8D8E. No red.
@@ -194,7 +194,7 @@ Privacy and security
 - Plan first: for anything bigger than a small fix, list files and steps, then wait for "go".
 - One small task at a time. Do not build features that were not asked for.
 - Tests first for backend logic. Run `pytest -q` after every backend change and report the result. Each feature adds tests/test_<feature>.py.
-- Stay in your lane (section 4). Need a shape, engine change, or shared component change? Write the request (what and why) and stop; Samuel makes core changes.
+- Branch freedom (section 4): on your feature branch, make the changes your feature needs, including shared files. Before editing a SHARED file, say which file and why in one line, then proceed. Never break existing shapes, routes, or the section 9 numbers.
 - Never change a data shape or API contract beyond section 6/7 without asking.
 - Frontend: all API calls through api.ts; types from types.ts; Tailwind tokens from section 11; no inline styles except animation values.
 - Accessibility: real buttons and labels; every drag has a button alternative; voice always has a text alternative.
@@ -209,14 +209,18 @@ Privacy and security
 - Never add auth, a database, analytics, or tracking.
 - Never commit secrets, .env, or real personal or health data.
 - Never delete or weaken tests or guardrails to make something work.
-- Never force-push or rewrite main.
+- Never push directly to main, never force-push, never rewrite main.
 - Never present the app as giving medical, legal, or coverage advice.
 
-## 15. Git workflow
-- main = working MVP, must always run. Branches: feature/chat (Malama), feature/documents (Chuck), feature/summary (Iyin), feature/filters (Kuwa), feature/timeline (Samuel).
-- Pull main into your branch every 1-2 hours (`git pull origin main`). Commit small.
-- Merge only at checkpoints via PR after a 2-minute demo and a green `pytest -q`. Merge order when several are ready: timeline/UI, summary, documents, filters, chat (chat last because it touches the start and end of the flow).
-- Conflict hot spots: main.py (one include_router line each), App.tsx/router (one mount point each), api.ts (own section each), models.py/types.ts (core team only).
+## 15. Git workflow (Samuel is the gatekeeper of main)
+- main = the official, always-working app. Nobody pushes to main directly; it is protected on GitHub. Samuel (repo owner) is the only person who merges into main.
+- Your branch is yours: feature/chat (Malama), feature/documents (Chuck), feature/summary (Iyin), feature/filters (Kuwa), feature/timeline (Samuel). Commit and push to your own branch as often as you like.
+- Pull main into your branch every 1-2 hours (`git pull origin main`) so your branch does not drift.
+- When your feature is ready: run `pytest -q` (green) and `npm run build` (clean), push your branch, then open a Pull Request from your branch into main. In the PR description include: what it does, how to test it with Maya, "Shared files changed" (list or "none"), and new env vars (if any). Then message Samuel.
+- Samuel reviews (2-minute demo or checks the PR), then merges, asks for changes, or leaves it on the branch. Unmerged features can keep living on their branch.
+- Claude: never push to main, never merge PRs, never force-push. On a feature branch, you may commit and push to that branch only when the user asks.
+- Merge order when several are ready: timeline/UI, summary, documents, filters, chat (chat last because it touches the start and end of the flow).
+- Conflict hot spots: main.py (one include_router line each), App.tsx/router (one mount point each), api.ts (own section each), models.py/types.ts (additive changes only).
 - Checkpoints: 11pm first feature merge, 3am feature freeze (fixes only), 6am backup video, 9am rehearsal, 10am present.
 
 ## 16. Definition of done
