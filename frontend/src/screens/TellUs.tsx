@@ -1,6 +1,7 @@
-import { useId, type Dispatch } from 'react'
+import { useId, type Dispatch, type ReactNode } from 'react'
 import { ArrowRight } from '../components/Icons'
 import Notice from '../components/Notice'
+import StepShell from '../components/StepShell'
 import { CAN_WAIT_HELP, CAN_WAIT_LABEL, CATEGORY_LABELS, DEMO_PLAN_LABEL } from '../copy'
 import DocumentIntake from '../features/documents/DocumentIntake'
 import { formatMoney } from '../format'
@@ -12,22 +13,19 @@ import RollLabel from '../components/RollLabel'
 interface Props {
   state: AppState
   dispatch: Dispatch<Action>
+  /** Mount point (feature/chat): the voice and text intake, first in the left column. */
+  intake?: ReactNode
 }
 
 const CATEGORIES: Category[] = ['preventive', 'basic', 'major']
 
-export default function TellUs({ state, dispatch }: Props) {
+export default function TellUs({ state, dispatch, intake }: Props) {
   const { load: loadMaya, loading, error } = useLoadMaya(dispatch)
 
-  return (
-    <section aria-labelledby="tell-us-title" className="space-y-6">
-      <div className="space-y-2">
-        <h2 id="tell-us-title" className="text-4xl font-light tracking-tight text-ink sm:text-5xl">
-          Tell us about your care
-        </h2>
-        <p className="text-ink/80">Add the procedures your dentist recommended and your plan details.</p>
-      </div>
-
+  // Left: the ways in (talk, Maya, a document). Right: what they fill in, to check and edit.
+  const waysIn = (
+    <>
+      {intake}
       <div className="flex flex-wrap items-center gap-3">
         <button type="button" onClick={() => void loadMaya()} disabled={loading} className="btn-primary">
           <RollLabel>
@@ -48,10 +46,20 @@ export default function TellUs({ state, dispatch }: Props) {
         onRead={(document) => dispatch({ type: 'document_read', document })}
         onAsk={(term) => dispatch({ type: 'ask_chat', text: askAboutDocument(term) })}
       />
+    </>
+  )
 
+  return (
+    <StepShell
+      titleId="tell-us-title"
+      title="Tell us about your care"
+      intro="Add the procedures your dentist recommended and your plan details."
+      aside={waysIn}
+      columns="even"
+    >
       <ProcedureList procedures={state.procedures} dispatch={dispatch} />
       <PlanForm plan={state.plan} onChange={(plan) => dispatch({ type: 'update_plan', plan })} />
-    </section>
+    </StepShell>
   )
 }
 
@@ -80,7 +88,7 @@ function ProcedureList({ procedures, dispatch }: { procedures: Procedure[]; disp
   const names = new Map(procedures.map((p) => [p.id, p.name]))
 
   return (
-    <div className="glass space-y-4 rounded-3xl p-5 sm:p-6">
+    <div className="glass space-y-4 rounded-3xl p-6">
       <div className="space-y-1">
         <h3 className="text-xl font-semibold tracking-tight text-ink">Your procedures</h3>
         <p className="text-sm text-muted-text">{CAN_WAIT_HELP}</p>
@@ -133,8 +141,8 @@ function PlanForm({ plan, onChange }: { plan: Plan; onChange: (plan: Plan) => vo
     )
 
   return (
-    <div className="glass rounded-3xl p-5 sm:p-6">
-    <fieldset className="space-y-5">
+    <div className="glass rounded-3xl p-6">
+    <fieldset className="space-y-6">
       <legend className="mb-4 text-xl font-semibold tracking-tight text-ink">Your plan</legend>
 
       <div className="grid gap-4 sm:grid-cols-2">

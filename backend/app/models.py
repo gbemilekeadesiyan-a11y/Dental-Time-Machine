@@ -292,6 +292,9 @@ class ChatResponse(_Model):
     # Feature addition (feature/chat): set only when the reply is in a different language
     # than the user's setting, because they wrote in it. Speech uses it for the voice.
     language: Language | None = Field(default=None, exclude_if=_unset)
+    # Feature addition (feature/chat): the ZIP the person getting care lives in, as the user
+    # typed it. Only a starting point for the dentist search, applied after the user confirms.
+    proposed_zip: Annotated[str, Field(pattern=r"^\d{5}$")] | None = Field(default=None, exclude_if=_unset)
 
 
 class SummaryRequest(_Model):

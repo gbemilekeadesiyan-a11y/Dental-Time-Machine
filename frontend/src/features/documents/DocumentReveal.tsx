@@ -116,7 +116,7 @@ export default function DocumentReveal({ previewUrl, phase, terms, onContinue, o
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: reduceMotion ? 0 : 0.35, ease: IOS_EASE }}
             >
-              <h3 id={titleId} className="text-2xl font-light tracking-tight text-ink sm:text-3xl">
+              <h3 id={titleId} className="text-2xl font-semibold tracking-tight text-balance text-ink sm:text-3xl">
                 Here&apos;s what your document is saying
               </h3>
               <p className="text-sm text-ink/80">Tap a term to see what it means in plain words.</p>

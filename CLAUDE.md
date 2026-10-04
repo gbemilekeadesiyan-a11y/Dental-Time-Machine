@@ -138,7 +138,7 @@ User flow: Start -> Intake (chat/voice OR form OR document) -> Confirm details -
 Shared state (frontend, session only): procedures, plan, schedule, preferences, filters, latest Result/OptimizeResult. Every feature reads it; only the screen that owns a step writes it. No browser storage beyond sessionStorage.
 
 Samuel (core team, branch feature/timeline, owns engine/models/types)
-- Animations and UI polish across the app; glass/gradient design system (section 11).
+- Animations and UI polish across the app; design system (section 11).
 - Timeline: user drags dental visits onto months of the year. The month is converted to "this_year"/"next_year" using plan.reset_date, then /calculate runs. Shows permutations from /optimize (best and alternatives). The engine works in plan years, so months only matter relative to the reset date; never show month-level prices the engine did not compute.
 - Owns adding approved shapes to models.py/types.ts and CashComparison to the engine (tests first).
 
@@ -169,8 +169,14 @@ Kuwa (branch feature/filters): rule-based filters
 - Budget filter: "keep this year's cost under $X" passes budget_this_year to /optimize (Kuwa may add this to optimizer.py on his branch, tests first).
 
 ## 11. Design system (Samuel owns tokens; everyone uses them)
-Tailwind tokens: primary #3C4AA1, primary-deep #3542A2, gradient #647CBF -> #3D4FA7, savings #589C7D, bg #F6F6F6, card #FFFFFF, ink #1B1D24, muted #8D8D8E. No red.
-Glass cards (white 60-70% + backdrop blur + thin white border + soft shadow) over soft blue gradient blobs. Pill buttons with an arrow. Large light headings, tight tracking. Text contrast at least 4.5:1. Inspired by modern dental sites; do not copy any template's layout, images, logos or text.
+Tailwind tokens: primary #3C4AA1, primary-deep #3542A2, primary-night #262F78 (dark sections and hover fill, white text), gradient #647CBF -> #3D4FA7, savings #589C7D, bg #F6F6F6, card #FFFFFF, ink #1B1D24, muted #8D8D8E, apricot #E08A4A (solid accent sections; ink text only, never white text, never for money, warnings or errors). No red.
+Text contrast at least 4.5:1. Inspired by modern dental sites; do not copy any template's layout, images, logos or text.
+- Surfaces: sections use solid color blocks (primary, apricot, primary-night, bg) instead of gradient blobs; white cards with a soft shadow sit on them. Glass (white 60-70% + backdrop blur + thin white border + soft shadow) only for floating UI: nav pill, menu panel, small overlays.
+- Buttons: pill buttons with an arrow. Every button uses btn-primary, btn-secondary, btn-light or btn-outline (index.css) and wraps its label in <RollLabel> (components/RollLabel.tsx) for the shared hover animation (fill rises, label rolls up). Text links stay plain underlined links.
+- Headings: bold (semibold 600), tracking -0.03em, balanced wrapping. h1 clamp(2.5rem, 5vw, 4.5rem) leading 1.05; h2 clamp(2rem, 3.5vw, 3rem) leading 1.1; h3 1.25rem. Eyebrow labels 0.75rem semibold uppercase, tracking 0.14em, muted-text. Body 1-1.125rem, leading 1.6, about 60ch wide. Utilities in index.css: heading-1, heading-2, heading-3, eyebrow, body-copy.
+- Spacing: 8 px scale only (4, 8, 12, 16, 24, 32, 48, 64, 96). Eyebrow to heading 12, heading to body 16, body to buttons 32, card padding 24, gaps between cards 16-24.
+- Container (components/Container.tsx): max-width 1200 px, centered; side padding 40 px from 1200 px, 24 px from 810 px, 16 px below. No other ad-hoc page max-widths.
+- Compact sections (section-y utility): 96 px top and bottom on desktop, 64 px on tablet, 48 px on phones. Breakpoints: tablet 810 px, desktop 1200 px.
 
 ## 12. Guardrails
 Medical safety

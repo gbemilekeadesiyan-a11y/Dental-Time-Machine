@@ -22,17 +22,17 @@ _WORDS: dict[Language, frozenset[str]] = {
     "es": frozenset(
         "el los las y mi mis necesito tengo cuánto cuanto cómo qué dijo del puede seguro muela diente "
         "dientes corona coronas empaste empastes deducible pagar pago año sí esto eso es una pero también "
-        "hola gracias duele dolor cuesta cubre estoy".split()
+        "hola gracias duele dolor cuesta cubre estoy ya listo lista puse hice tiene".split()
     ),
     "fr": frozenset(
         "et je mon ma mes est une des du besoin dentiste combien quoi couronne couronnes plombage "
         "carie franchise payer année oui merci bonjour avec pour pas ce c'est j'ai dit mais aussi vous "
-        "suis il elle dent dents attendre qu'est-ce".split()
+        "suis il elle dent dents attendre qu'est-ce déjà fini voilà".split()
     ),
     "pt": frozenset(
         "o os e eu meu minha meus preciso tenho quanto disse da dos das com não sim coroa coroas "
         "obturação obturações franquia ano isso isto uma mas também olá obrigado obrigada dente dentes "
-        "você é plano dói custa".split()
+        "você é plano dói custa já pronto coloquei".split()
     ),
 }
 _TOKEN = re.compile(r"[^\W\d_]+(?:['’-][^\W\d_]+)*")

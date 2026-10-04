@@ -155,8 +155,22 @@ export function daysFromToday(iso: string, today = new Date()): number {
   return Math.round((target.getTime() - start.getTime()) / 86_400_000)
 }
 
+/**
+ * How far to search for a distance setting. Wider than the setting, so dentists just past it
+ * can still be listed below the nearby ones instead of disappearing.
+ */
+export function searchRadius(miles: number): number {
+  return Math.min(MAX_SEARCH_MILES, Math.max(FARTHER_MIN_MILES, miles * 2))
+}
+const MAX_SEARCH_MILES = 100 // The /dentists limit.
+const FARTHER_MIN_MILES = 25
+
+export function isNearby(d: DentistResult, f: Filters): boolean {
+  return d.distance_miles <= f.max_distance_miles
+}
+
+/** Every filter except distance: distance only orders the list (see matchAndSort). */
 export function matchesDentist(d: DentistResult, f: Filters, today = new Date()): boolean {
-  if (d.distance_miles > f.max_distance_miles) return false
   if (f.in_network_only && f.payment === 'insurance' && !d.in_network) return false
   if (f.accepting_new_only && !d.accepting_new) return false
   if (f.no_referral_only && !d.no_referral_required) return false
@@ -170,12 +184,21 @@ export function matchesDentist(d: DentistResult, f: Filters, today = new Date())
   return true
 }
 
+/**
+ * Matching dentists, with the ones inside the distance setting first (in the chosen order)
+ * and the farther ones after them, nearest first. Distance is a preference, not a cutoff.
+ */
 export function matchAndSort(dentists: DentistResult[], f: Filters, today = new Date()): DentistResult[] {
   const byDistance = (a: DentistResult, b: DentistResult) =>
     a.distance_miles - b.distance_miles || a.name.localeCompare(b.name)
+  const nearbyFirst = (a: DentistResult, b: DentistResult) => Number(!isNearby(a, f)) - Number(!isNearby(b, f))
   return dentists
     .filter((d) => matchesDentist(d, f, today))
-    .sort((a, b) =>
-      f.sort === 'earliest' ? a.next_available.localeCompare(b.next_available) || byDistance(a, b) : byDistance(a, b),
+    .sort(
+      (a, b) =>
+        nearbyFirst(a, b) ||
+        (f.sort === 'earliest' && isNearby(a, f)
+          ? a.next_available.localeCompare(b.next_available) || byDistance(a, b)
+          : byDistance(a, b)),
     )
 }

@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { ApiError, calculate, isAbortError, optimize } from '../../api'
 import Disclaimer from '../../components/Disclaimer'
 import Notice from '../../components/Notice'
+import StepShell from '../../components/StepShell'
 import type { AppState } from '../../state'
 import type { OptimizeResult, Result } from '../../types'
 import CashVsInsurance from './CashVsInsurance'
@@ -15,6 +16,8 @@ import TotalsCard from './TotalsCard'
 interface Props {
   state: AppState
   onEditCare: () => void
+  /** Mount point (feature/chat): the chatbot recap, in the left column beside the tabs. */
+  recap?: ReactNode
 }
 
 type Inputs = Pick<AppState, 'procedures' | 'plan' | 'schedule'>
@@ -31,7 +34,7 @@ interface Answer {
  * POST /optimize for the best timing and its savings. Every dollar amount shown
  * comes from those responses (CLAUDE.md section 2).
  */
-export default function SummaryScreen({ state, onEditCare }: Props) {
+export default function SummaryScreen({ state, onEditCare, recap }: Props) {
   const { procedures, plan, schedule } = state
   const [answer, setAnswer] = useState<Answer | null>(null)
   const [tab, setTab] = useState<SummaryTab>('overview')
@@ -118,15 +121,8 @@ export default function SummaryScreen({ state, onEditCare }: Props) {
   }
 
   return (
-    <section aria-labelledby="summary-title" className="space-y-6">
-      <div className="space-y-2">
-        <h2 id="summary-title" className="text-4xl font-light tracking-tight text-ink sm:text-5xl">
-          {SUMMARY_TITLE}
-        </h2>
-        <p className="text-lg text-ink/80">{intro}</p>
-      </div>
+    <StepShell titleId="summary-title" title={SUMMARY_TITLE} intro={intro} aside={recap} after={<Disclaimer />}>
       {body}
-      <Disclaimer />
-    </section>
+    </StepShell>
   )
 }

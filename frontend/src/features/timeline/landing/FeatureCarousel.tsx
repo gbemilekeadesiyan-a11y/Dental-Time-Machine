@@ -9,6 +9,7 @@ import {
 } from 'framer-motion'
 import { useEffect, useId, useRef, useState, type FocusEvent, type KeyboardEvent } from 'react'
 import { LANDING } from './landingCopy'
+import Container from '../../../components/Container'
 import RollLabel from '../../../components/RollLabel'
 
 /** Seconds each slide stays before moving to the next. */
@@ -126,20 +127,21 @@ export default function FeatureCarousel() {
     <section
       ref={sectionRef}
       aria-labelledby={headingId}
-      className="graph-paper px-5 py-24 sm:px-8 sm:py-32"
+      id={LANDING.nav.howItWorks.id}
+      className="graph-paper section-y scroll-mt-16"
       onFocus={onFocusIn}
       onBlur={onFocusOut}
     >
-      <div className="mx-auto max-w-6xl space-y-10">
-        <div className="space-y-4">
-          <p className="text-sm font-medium tracking-[0.18em] text-muted-text uppercase">{LANDING.featuresLabel}</p>
-          <h2 id={headingId} className="text-4xl font-light tracking-tight text-ink sm:text-5xl">
+      <Container className="space-y-8 desktop:space-y-12">
+        <div className="space-y-3">
+          <p className="eyebrow">{LANDING.featuresLabel}</p>
+          <h2 id={headingId} className="heading-2 text-ink">
             {LANDING.featuresHeading}
           </h2>
         </div>
 
         <div
-          className="grid items-center gap-8 lg:grid-cols-[2fr_3fr] lg:gap-12"
+          className="grid items-center gap-6 lg:grid-cols-[2fr_3fr] lg:gap-12"
           onPointerEnter={() => setHovered(true)}
           onPointerLeave={() => setHovered(false)}
         >
@@ -162,7 +164,7 @@ export default function FeatureCarousel() {
                   onClick={() => select(i)}
                   onKeyDown={(e) => onTabKeyDown(e, i)}
                   className={
-                    'block w-full space-y-2 rounded-2xl p-4 text-left transition-colors ' +
+                    'block w-full space-y-1 rounded-2xl p-4 text-left transition-colors ' +
                     'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ' +
                     (selected ? 'glass' : 'hover:bg-card/60')
                   }
@@ -186,7 +188,7 @@ export default function FeatureCarousel() {
             role="tabpanel"
             aria-labelledby={tabId(active)}
             aria-live={running ? 'off' : 'polite'}
-            className="group relative order-1 aspect-4/3 overflow-hidden rounded-3xl shadow-xl shadow-primary/10 ring-1 ring-ink/5 lg:order-2"
+            className="group relative order-1 aspect-16/10 max-h-[480px] overflow-hidden rounded-3xl shadow-xl shadow-primary/10 ring-1 ring-ink/5 lg:order-2"
           >
             <AnimatePresence mode="popLayout" initial={false}>
               <motion.div
@@ -223,7 +225,7 @@ export default function FeatureCarousel() {
             )}
           </div>
         </div>
-      </div>
+      </Container>
     </section>
   )
 }
@@ -246,8 +248,8 @@ function SlideVisual({ slide, first, missing, reduceMotion, onMissing }: SlideVi
   const [loaded, setLoaded] = useState(false)
   return (
     <>
-      <div className="absolute inset-0 flex items-end bg-linear-to-br from-gradient-from/20 to-gradient-to/35 p-6 sm:p-10">
-        <p className="max-w-sm text-3xl font-light tracking-tight text-ink sm:text-4xl">{slide.title}</p>
+      <div className="absolute inset-0 flex items-end bg-linear-to-br from-gradient-from/20 to-gradient-to/35 p-6 desktop:p-8">
+        <p className="text-3xl font-semibold tracking-tight text-balance text-ink sm:text-4xl">{slide.title}</p>
       </div>
       {!missing && (
         <motion.img
