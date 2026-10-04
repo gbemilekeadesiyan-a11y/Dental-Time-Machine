@@ -5,6 +5,7 @@ import Disclaimer from '../components/Disclaimer'
 import JargonChip from '../components/JargonChip'
 import MaxRing from '../components/MaxRing'
 import Notice from '../components/Notice'
+import StepShell from '../components/StepShell'
 import type { AppState } from '../state'
 import type { Result } from '../types'
 
@@ -43,18 +44,16 @@ export default function YourYear({ state, onEditCare }: Props) {
   const movedCount = Object.values(schedule).filter((y) => y === 'next_year').length
 
   return (
-    <section aria-labelledby="your-year-title" className="space-y-6">
-      <div className="space-y-2">
-        <h2 id="your-year-title" className="text-4xl font-light tracking-tight text-ink sm:text-5xl">
-          Your year
-        </h2>
-        <p className="text-ink/80">
-          {movedCount === 0
-            ? 'Based on getting all of your care this plan year.'
-            : `Based on the timing you chose, with ${movedCount} ${movedCount === 1 ? 'procedure' : 'procedures'} in next plan year.`}
-        </p>
-      </div>
-
+    <StepShell
+      titleId="your-year-title"
+      title="Your year"
+      intro={
+        movedCount === 0
+          ? 'Based on getting all of your care this plan year.'
+          : `Based on the timing you chose, with ${movedCount} ${movedCount === 1 ? 'procedure' : 'procedures'} in next plan year.`
+      }
+      after={<Disclaimer />}
+    >
       {procedures.length === 0 ? (
         <Notice>
           Add your care first.{' '}
@@ -96,8 +95,6 @@ export default function YourYear({ state, onEditCare }: Props) {
           </div>
         </div>
       )}
-
-      <Disclaimer />
-    </section>
+    </StepShell>
   )
 }

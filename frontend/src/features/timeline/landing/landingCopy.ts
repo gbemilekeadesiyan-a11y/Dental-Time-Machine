@@ -4,6 +4,12 @@ import { RESET_WORDING } from '../../../glossary'
 
 export const LANDING = {
   start: 'Start',
+
+  // Header links. They scroll to the sections with these ids.
+  nav: {
+    howItWorks: { label: 'How it works', id: 'how-it-works' },
+    whyTiming: { label: 'Why timing', id: 'why-timing' },
+  },
   seeMaya: "See Maya's example",
   loadingMaya: 'Loading Maya…',
   /** Read by screen readers as one heading; drawn as two drifting halves. */

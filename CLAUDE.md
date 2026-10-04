@@ -170,7 +170,11 @@ Kuwa (branch feature/filters): rule-based filters
 
 ## 11. Design system (Samuel owns tokens; everyone uses them)
 Tailwind tokens: primary #3C4AA1, primary-deep #3542A2, gradient #647CBF -> #3D4FA7, savings #589C7D, bg #F6F6F6, card #FFFFFF, ink #1B1D24, muted #8D8D8E. No red.
-Glass cards (white 60-70% + backdrop blur + thin white border + soft shadow) over soft blue gradient blobs. Pill buttons with an arrow. Large light headings, tight tracking. Text contrast at least 4.5:1. Inspired by modern dental sites; do not copy any template's layout, images, logos or text.
+Glass cards (white 60-70% + backdrop blur + thin white border + soft shadow) over soft blue gradient blobs. Pill buttons with an arrow. Text contrast at least 4.5:1. Inspired by modern dental sites; do not copy any template's layout, images, logos or text.
+- Headings: bold (semibold 600), tracking -0.03em, balanced wrapping. h1 clamp(2.5rem, 5vw, 4.5rem) leading 1.05; h2 clamp(2rem, 3.5vw, 3rem) leading 1.1; h3 1.25rem. Eyebrow labels 0.75rem semibold uppercase, tracking 0.14em, muted-text. Body 1-1.125rem, leading 1.6, about 60ch wide. Utilities in index.css: heading-1, heading-2, heading-3, eyebrow, body-copy.
+- Spacing: 8 px scale only (4, 8, 12, 16, 24, 32, 48, 64, 96). Eyebrow to heading 12, heading to body 16, body to buttons 32, card padding 24, gaps between cards 16-24.
+- Container (components/Container.tsx): max-width 1200 px, centered; side padding 40 px from 1200 px, 24 px from 810 px, 16 px below. No other ad-hoc page max-widths.
+- Compact sections (section-y utility): 96 px top and bottom on desktop, 64 px on tablet, 48 px on phones. Breakpoints: tablet 810 px, desktop 1200 px.
 
 ## 12. Guardrails
 Medical safety

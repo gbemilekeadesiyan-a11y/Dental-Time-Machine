@@ -1,7 +1,8 @@
 import { AnimatePresence, motion, useReducedMotion, type Variants } from 'framer-motion'
 import { useReducer, useState } from 'react'
 import { ArrowLeft, ArrowRight } from './components/Icons'
-import Logo from './components/Logo'
+import Container from './components/Container'
+import SiteHeader from './components/SiteHeader'
 import StepIndicator from './components/StepIndicator'
 import FindCare from './features/filters/FindCare'
 import TellUs from './screens/TellUs'
@@ -13,7 +14,9 @@ import ChatIntake from './features/chat/ChatIntake'
 import ChatSummary from './features/chat/ChatSummary'
 import PreferencesPicker from './features/chat/PreferencesPicker'
 import SummaryScreen from './features/summary/SummaryScreen'
+import { NAV, stepOf } from './copy'
 import { initialState, reducer } from './state'
+import { StepContext } from './stepContext'
 import RollLabel from './components/RollLabel'
 
 interface ScreenDef {
@@ -50,8 +53,8 @@ const stepSlide: Variants = {
 }
 
 /**
- * Landing to steps and back: a fade only. A transform here would pin the landing's
- * fixed top bar to this wrapper while it fades.
+ * Landing to steps and back: a fade only. A transform here would pin the fixed header
+ * to this wrapper while it fades.
  */
 const pageFade: Variants = {
   enter: { opacity: 0 },
@@ -84,25 +87,15 @@ export default function App() {
   function renderScreen(current: ScreenIndex) {
     switch (current) {
       case 0:
-        return (
-          <div className="space-y-6">
-            {/* Mount point (feature/chat): voice/text intake above the form. */}
-            <ChatIntake state={state} dispatch={dispatch} />
-            <TellUs state={state} dispatch={dispatch} />
-          </div>
-        )
+        // Mount point (feature/chat): voice/text intake, first in Tell us' left column.
+        return <TellUs state={state} dispatch={dispatch} intake={<ChatIntake state={state} dispatch={dispatch} />} />
       case 1:
         return <WhatItMeans state={state} onEditCare={() => go(0)} />
       case 2:
         return <TwoFutures state={state} dispatch={dispatch} onEditCare={() => go(0)} />
       case 3:
-        return (
-          <div className="space-y-6">
-            <SummaryScreen state={state} onEditCare={() => go(0)} />
-            {/* Mount point (feature/chat): the chatbot recap under the visual summary. */}
-            <ChatSummary state={state} />
-          </div>
-        )
+        // Mount point (feature/chat): the chatbot recap, beside the visual summary.
+        return <SummaryScreen state={state} onEditCare={() => go(0)} recap={<ChatSummary state={state} />} />
       case 4:
         return <FindCare state={state} onEditCare={() => go(0)} />
       case 5:
@@ -127,15 +120,25 @@ export default function App() {
         // overflow-x-clip: a step sliding in never adds a sideways scrollbar.
         <motion.div key="steps" className="overflow-x-clip" variants={page} initial="enter" animate="center" exit="exit">
           <BackgroundBlobs />
-          <div className="mx-auto flex min-h-screen max-w-4xl flex-col gap-8 px-4 py-6 sm:px-6 sm:py-8">
-            <header className="flex flex-wrap items-center justify-between gap-3">
-              <h1 className="text-ink">
-                <Logo />
-              </h1>
+          {/* The same morphing header as the landing page; it stays put while the steps slide. */}
+          <SiteHeader
+            tone="light"
+            navLabel={NAV.pagesLabel}
+            links={[{ label: NAV.home, onSelect: () => go('start') }]}
+            note={stepOf(view + 1, SCREENS.length)}
+            menuItems={[
+              { label: NAV.home, onSelect: () => go('start') },
+              ...SCREENS.map((s, i) => ({ label: s.label, current: i === view, onSelect: () => go(i as ScreenIndex) })),
+            ]}
+          />
+          {/* pt-24 clears the 72 px header with 24 px to spare. */}
+          <Container className="flex min-h-screen flex-col gap-8 pt-24 pb-6 tablet:pb-8">
+            <h1 className="sr-only">Dental Time Machine</h1>
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <StepIndicator steps={SCREENS} current={view} onSelect={(i) => go(i as ScreenIndex)} />
               {/* Mount point (feature/chat): language, style and voice. */}
               <PreferencesPicker preferences={state.preferences} dispatch={dispatch} />
-            </header>
+            </div>
 
             <main className="flex-1">
               <AnimatePresence mode="wait" initial={false} custom={dir} onExitComplete={toTop}>
@@ -147,7 +150,10 @@ export default function App() {
                   animate="center"
                   exit="exit"
                 >
-                  {renderScreen(view)}
+                  {/* Inside the keyed page, so a page fading out keeps its own step number. */}
+                  <StepContext.Provider value={{ number: view + 1, total: SCREENS.length }}>
+                    {renderScreen(view)}
+                  </StepContext.Provider>
                 </motion.div>
               </AnimatePresence>
             </main>
@@ -167,7 +173,7 @@ export default function App() {
                 </RollLabel>
               </button>
             </footer>
-          </div>
+          </Container>
         </motion.div>
       )}
     </AnimatePresence>

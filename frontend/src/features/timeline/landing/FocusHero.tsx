@@ -21,7 +21,7 @@ export default function FocusHero({ onSeeMaya, loading, error }: Props) {
   const heroRef = useRef<HTMLElement>(null)
 
   return (
-    <section ref={heroRef} className="focus-hero relative h-svh min-h-[36rem] overflow-hidden">
+    <section ref={heroRef} className="focus-hero relative h-[min(100svh,860px)] min-h-[36rem] overflow-hidden">
       {/* Ambient fill: the photo stretched over the whole hero, very blurred and dim, so the
           space around the smaller photo isn't empty. Extends past the edges so the blur
           doesn't fade to a light halo. */}
