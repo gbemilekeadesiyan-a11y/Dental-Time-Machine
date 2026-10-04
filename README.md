@@ -48,7 +48,7 @@ When your plan year resets, eligible benefits may become available again, based 
 
 That's the "time machine": the same care with smarter timing.
 
-<p align="center"><img src="docs/readme/02-the-time-machine.png" alt="Hand-drawn sketch: two cups labeled this plan year and next plan year, separated by a dashed line labeled plan year resets. A small black creature carries crown 2 across the line. Notes read $2,500 to $1,975, about $525 less, and only if your dentist says it can wait." width="760"></p>
+<p align="center"><img src="02-the-time-machine.png" alt="Hand-drawn sketch: two cups labeled this plan year and next plan year, separated by a dashed line labeled plan year resets. A small black creature carries crown 2 across the line. Notes read $2,500 to $1,975, about $525 less, and only if your dentist says it can wait." width="760"></p>
 
 ### Meet Maya (our demo patient)
 
@@ -149,7 +149,7 @@ To make sure of that, a **"dollar guard"** checks every sentence the AI writes, 
 
 The calculator is backed by **over 1,000 automated checks**, including Maya's exact numbers.
 
-<p align="center"><img src="docs/readme/03-the-golden-rule.png" alt="Hand-drawn sketch: a small black creature turns the crank of a box labeled the engine. A number passes a red gate labeled dollar guard into a speech bubble labeled the AI talks. A made-up number is stopped at the gate." width="760"></p>
+<p align="center"><img src="03-the-golden-rule.png" alt="Hand-drawn sketch: a small black creature turns the crank of a box labeled the engine. A number passes a red gate labeled dollar guard into a speech bubble labeled the AI talks. A made-up number is stopped at the gate." width="760"></p>
 
 ### It never plays doctor
 - The app **never decides whether care can wait**. Only your dentist can. Procedures stay locked until *you* confirm "My dentist said this can wait."
