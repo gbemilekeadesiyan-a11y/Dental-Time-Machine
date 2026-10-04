@@ -3,7 +3,7 @@
  * (CLAUDE.md section 10: state lives in the browser session only).
  */
 
-import type { Plan, Procedure, Schedule } from './types'
+import type { Language, Plan, Preferences, Procedure, Schedule } from './types'
 
 export interface AppState {
   procedures: Procedure[]
@@ -12,6 +12,16 @@ export interface AppState {
   schedule: Schedule
   /** True while the plan is Maya's unedited demo plan (shows the "Demo plan" label). */
   isDemo: boolean
+  /** Language, wording style and voice (feature/chat). Session only. */
+  preferences: Preferences
+}
+
+const LANGUAGES: readonly Language[] = ['en', 'es', 'fr', 'pt']
+
+/** Offer the browser's language when we support it; the user can change it any time. */
+function browserLanguage(): Language {
+  const code = typeof navigator === 'undefined' ? '' : navigator.language.slice(0, 2).toLowerCase()
+  return LANGUAGES.find((l) => l === code) ?? 'en'
 }
 
 /**
@@ -34,6 +44,7 @@ export const initialState: AppState = {
   plan: BLANK_PLAN,
   schedule: {},
   isDemo: false,
+  preferences: { language: browserLanguage(), style: 'simple', voice_on: false },
 }
 
 export type Action =
@@ -41,11 +52,25 @@ export type Action =
   | { type: 'set_can_wait'; id: string; canWait: boolean }
   | { type: 'update_plan'; plan: Plan }
   | { type: 'set_schedule'; schedule: Schedule }
+  | { type: 'add_procedures'; procedures: Procedure[] }
+  | { type: 'set_preferences'; preferences: Preferences }
+  /**
+   * Details the user confirmed on a document upload. Replaces procedures and/or
+   * the plan; null leaves that part as it was. Only dispatched after the user confirms.
+   */
+  | { type: 'confirmed_intake'; procedures: Procedure[] | null; plan: Plan | null }
 
 export function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
     case 'loaded_demo':
-      return { procedures: action.procedures, plan: action.plan, schedule: {}, isDemo: true }
+      return { ...state, procedures: action.procedures, plan: action.plan, schedule: {}, isDemo: true }
+
+    case 'add_procedures':
+      // Only called after the user confirms proposals on a form. New procedures start in this year.
+      return { ...state, procedures: [...state.procedures, ...action.procedures] }
+
+    case 'set_preferences':
+      return { ...state, preferences: action.preferences }
 
     case 'set_can_wait': {
       const procedures = state.procedures.map((p) => (p.id === action.id ? { ...p, can_wait: action.canWait } : p))
@@ -62,6 +87,17 @@ export function reducer(state: AppState, action: Action): AppState {
     case 'update_plan':
       // Once the user edits the plan it's no longer the demo plan.
       return { ...state, plan: action.plan, isDemo: false }
+
+    case 'confirmed_intake':
+      // New procedures replace the old ones, so old schedule moves no longer apply.
+      // The user's own details are never the demo plan.
+      return {
+        ...state,
+        procedures: action.procedures ?? state.procedures,
+        plan: action.plan ?? state.plan,
+        schedule: action.procedures ? {} : state.schedule,
+        isDemo: false,
+      }
 
     default: {
       const unreachable: never = action

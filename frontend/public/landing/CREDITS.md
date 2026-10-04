@@ -9,3 +9,4 @@ and no photos of people's faces taken from other sites.
 | what-it-means.webp | | | |
 | two-futures.webp | | | |
 | your-year.webp | | | |
+| hero.webp | | | |

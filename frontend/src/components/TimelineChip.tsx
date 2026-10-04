@@ -3,6 +3,7 @@ import { LOCKED_HELP, LOCKED_LABEL, MOVE_TO_NEXT_YEAR, MOVE_TO_THIS_YEAR } from 
 import { formatMoney } from '../format'
 import { ArrowLeft, ArrowRight, LockIcon } from './Icons'
 import type { Year } from '../types'
+import RollLabel from './RollLabel'
 
 interface Props {
   id: string
@@ -59,10 +60,12 @@ export default function TimelineChip({ id, label, year, canMove, youPay, note, o
         <button
           type="button"
           onClick={() => onMove(id, other)}
-          className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-primary bg-card px-4 text-sm font-medium text-primary transition-colors hover:bg-primary hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          className="btn-outline px-4 text-sm"
         >
-          {other === 'next_year' ? MOVE_TO_NEXT_YEAR : MOVE_TO_THIS_YEAR}
-          {other === 'next_year' ? <ArrowRight /> : <ArrowLeft />}
+          <RollLabel>
+            {other === 'next_year' ? MOVE_TO_NEXT_YEAR : MOVE_TO_THIS_YEAR}
+            {other === 'next_year' ? <ArrowRight /> : <ArrowLeft />}
+          </RollLabel>
         </button>
       ) : (
         <div className="space-y-1">

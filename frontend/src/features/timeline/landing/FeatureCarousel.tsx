@@ -9,6 +9,7 @@ import {
 } from 'framer-motion'
 import { useEffect, useId, useRef, useState, type FocusEvent, type KeyboardEvent } from 'react'
 import { LANDING } from './landingCopy'
+import RollLabel from '../../../components/RollLabel'
 
 /** Seconds each slide stays before moving to the next. */
 const SLIDE_SECONDS = 6
@@ -75,6 +76,13 @@ export default function FeatureCarousel() {
     timer.current = controls
     return () => controls.stop()
   }, [active, cycle, reduceMotion, progress, slides.length])
+
+  // Warm the next slide's photo once the carousel is on screen, so it fades in with its slide.
+  useEffect(() => {
+    if (!inView) return
+    const next = slides[(active + 1) % slides.length]
+    if (next) new Image().src = next.image
+  }, [active, inView, slides])
 
   useEffect(() => {
     if (running) timer.current?.play()
@@ -193,7 +201,7 @@ export default function FeatureCarousel() {
                   slide={slide}
                   first={active === 0}
                   missing={missingImages.has(slide.image)}
-                  zoomOnHover={!reduceMotion}
+                  reduceMotion={reduceMotion}
                   onMissing={() => setMissingImages((prev) => new Set(prev).add(slide.image))}
                 />
               </motion.div>
@@ -205,10 +213,12 @@ export default function FeatureCarousel() {
                 type="button"
                 onClick={() => setUserPaused((p) => !p)}
                 aria-label={userPaused ? LANDING.playLabel : LANDING.pauseLabel}
-                className="glass absolute top-4 right-4 z-10 inline-flex min-h-11 items-center gap-2 rounded-full px-4 text-sm font-medium text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                className="btn-light absolute top-4 right-4 z-10 px-4 text-sm"
               >
-                {userPaused ? <PlayIcon /> : <PauseIcon />}
-                {userPaused ? LANDING.play : LANDING.pause}
+                <RollLabel>
+                  {userPaused ? <PlayIcon /> : <PauseIcon />}
+                  {userPaused ? LANDING.play : LANDING.pause}
+                </RollLabel>
               </button>
             )}
           </div>
@@ -222,32 +232,39 @@ interface SlideVisualProps {
   slide: Slide
   first: boolean
   missing: boolean
-  zoomOnHover: boolean
+  /** Reduced motion: no fade-in and no hover zoom. */
+  reduceMotion: boolean
   onMissing: () => void
 }
 
 /**
- * A soft gradient placeholder with the slide title, with the photo on top once it loads.
- * If the photo file doesn't exist yet, only the placeholder shows.
+ * A soft gradient placeholder with the slide title, with the photo fading in on top once
+ * it loads (0.5 s, the same feel as the slide crossfade). If the photo file is missing,
+ * only the placeholder shows.
  */
-function SlideVisual({ slide, first, missing, zoomOnHover, onMissing }: SlideVisualProps) {
+function SlideVisual({ slide, first, missing, reduceMotion, onMissing }: SlideVisualProps) {
+  const [loaded, setLoaded] = useState(false)
   return (
     <>
       <div className="absolute inset-0 flex items-end bg-linear-to-br from-gradient-from/20 to-gradient-to/35 p-6 sm:p-10">
         <p className="max-w-sm text-3xl font-light tracking-tight text-ink sm:text-4xl">{slide.title}</p>
       </div>
       {!missing && (
-        <img
+        <motion.img
           src={slide.image}
           alt={slide.alt}
           width={IMAGE_WIDTH}
           height={IMAGE_HEIGHT}
           loading={first ? 'eager' : 'lazy'}
           decoding="async"
+          onLoad={() => setLoaded(true)}
           onError={onMissing}
+          initial={false}
+          animate={{ opacity: loaded ? 1 : 0 }}
+          transition={{ duration: reduceMotion ? 0 : 0.5, ease: 'easeOut' }}
           className={
             'absolute inset-0 size-full object-cover ' +
-            (zoomOnHover ? 'transition-transform duration-[600ms] ease-out group-hover:scale-[1.04]' : '')
+            (reduceMotion ? '' : 'transition-transform duration-[600ms] ease-out group-hover:scale-[1.04]')
           }
         />
       )}

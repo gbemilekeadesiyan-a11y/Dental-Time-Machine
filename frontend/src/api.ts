@@ -6,16 +6,23 @@
 import type {
   CalculateRequest,
   CatalogItem,
+  ChatRequest,
+  ChatResponse,
   DemoResponse,
+  DocumentReadResult,
   ErrorResponse,
   ExplainRequest,
   ExplainResponse,
+  Language,
   OptimizeRequest,
   OptimizeResult,
   ParseRequest,
   Procedure,
   Result,
+  SummaryRequest,
+  SummaryResponse,
 } from './types'
+import type { DentistSearchResponse, FilterParseRequest, FilterParseResponse } from './features/filters/types'
 
 const API_URL: string = (() => {
   const url = import.meta.env.VITE_API_URL
@@ -120,4 +127,70 @@ export function explain(
   options?: RequestOptions,
 ): Promise<ExplainResponse> {
   return post<ExplainResponse>('/explain', { term, language, style } satisfies ExplainRequest, options)
+}
+
+// ---------- documents (Chuks, feature/documents) ----------
+
+const DOCUMENT_NAMES: Record<string, string> = {
+  'application/pdf': 'document.pdf',
+  'image/jpeg': 'document.jpg',
+  'image/png': 'document.png',
+}
+
+/**
+ * POST /read-document: read plan details and procedures from a pdf, jpg or png.
+ * The result always goes to the confirm form, never straight into the estimate.
+ * Sends a neutral file name so the user's own file name never leaves the browser.
+ */
+export function readDocument(file: File, options?: RequestOptions): Promise<DocumentReadResult> {
+  const form = new FormData()
+  form.append('file', file, DOCUMENT_NAMES[file.type] ?? 'document')
+  // No Content-Type header: the browser sets the multipart boundary itself.
+  return request<DocumentReadResult>('/read-document', { method: 'POST', body: form }, options)
+}
+
+// ---------- feature/chat (Malama) ----------
+
+/** POST /chat: one assistant reply. Proposals still need the user's confirmation. */
+export function chat(body: ChatRequest, options?: RequestOptions): Promise<ChatResponse> {
+  return post<ChatResponse>('/chat', body, options)
+}
+
+/** POST /summary: a recap of the engine's figures in the user's language. Ends with the disclaimer. */
+export function summary(body: SummaryRequest, options?: RequestOptions): Promise<SummaryResponse> {
+  return post<SummaryResponse>('/summary', body, options)
+}
+
+/** POST /speak: MP3 audio of the text (Polly). Fails with ApiError(503) when voice is unavailable. */
+export async function speak(text: string, language: Language, options: RequestOptions = {}): Promise<Blob> {
+  let response: Response
+  try {
+    response = await fetch(`${API_URL}/speak`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, language }),
+      signal: options.signal ?? null,
+    })
+  } catch (error) {
+    if (isAbortError(error)) throw error
+    throw new ApiError(0, NETWORK_MESSAGE)
+  }
+  if (!response.ok) {
+    const body: unknown = await response.json().catch(() => null)
+    throw new ApiError(response.status, isErrorResponse(body) ? body.detail : SERVER_MESSAGE)
+  }
+  return response.blob()
+}
+
+// ---------- feature/filters (Kuwa) ----------
+
+/** GET /dentists: dentists near a ZIP from the CMS NPI Registry, nearest first. */
+export function getDentists(zip: string, maxDistanceMiles: number, options?: RequestOptions): Promise<DentistSearchResponse> {
+  const query = new URLSearchParams({ zip, max_distance_miles: String(maxDistanceMiles) })
+  return get<DentistSearchResponse>(`/dentists?${query.toString()}`, options)
+}
+
+/** POST /filters/parse: the filters a plain-language request changes. Only changed keys come back. */
+export function parseFilters(text: string, options?: RequestOptions): Promise<FilterParseResponse> {
+  return post<FilterParseResponse>('/filters/parse', { text } satisfies FilterParseRequest, options)
 }
