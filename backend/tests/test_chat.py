@@ -11,7 +11,7 @@ Rules under test (CLAUDE.md sections 10 and 12):
 
 from __future__ import annotations
 
-import json
+import logging
 from typing import Any
 
 import pytest
@@ -38,29 +38,39 @@ def client() -> TestClient:
 
 
 class FakeBedrock:
-    """Stands in for bedrock.call: returns queued replies and records each call."""
+    """Stands in for bedrock.call_with_tool: returns queued replies and records each call."""
 
-    def __init__(self, *replies: str | None) -> None:
+    def __init__(self, *replies: bedrock.ToolReply | None) -> None:
         self.replies = list(replies)
         self.calls: list[dict[str, Any]] = []
 
-    def __call__(self, system: str, messages: list[dict[str, Any]], **kwargs: Any) -> str | None:
-        self.calls.append({"system": system, "messages": messages, **kwargs})
+    def __call__(
+        self, system: str, messages: list[dict[str, Any]], tool: dict[str, Any], **kwargs: Any
+    ) -> bedrock.ToolReply | None:
+        self.calls.append({"system": system, "messages": messages, "tool": tool, **kwargs})
         return self.replies.pop(0) if self.replies else None
 
 
 @pytest.fixture
 def llm(monkeypatch: pytest.MonkeyPatch):
-    def install(*replies: str | None) -> FakeBedrock:
+    def install(*replies: bedrock.ToolReply | None) -> FakeBedrock:
         fake = FakeBedrock(*replies)
-        monkeypatch.setattr(bedrock, "call", fake)
+        monkeypatch.setattr(bedrock, "call_with_tool", fake)
         return fake
 
     return install
 
 
-def reply(say: str = "Got it.", procedures: list[dict[str, Any]] | None = None, **extra: Any) -> str:
-    return json.dumps({"say": say, "procedures": procedures or [], "can_wait_ids": [], "done_intake": False} | extra)
+def reply(say: str = "Got it.", procedures: list[dict[str, Any]] | None = None, **extra: Any) -> bedrock.ToolReply:
+    """The model's text plus a record_details call."""
+    recorded = {"procedures": procedures or [], "can_wait_ids": [], "done_intake": False} | extra
+    return bedrock.ToolReply(text=say, tool_input=recorded, tool_use_id="t1")
+
+
+def tool_only(**recorded: Any) -> bedrock.ToolReply:
+    """A record_details call with no text for the user."""
+    content = [{"toolUse": {"toolUseId": "t1", "name": "record_details", "input": recorded}}]
+    return bedrock.ToolReply(text="", tool_input=recorded, tool_use_id="t1", content=content)
 
 
 def body(*turns: tuple[str, str], language: str = "en", with_care: bool = False) -> dict[str, Any]:
@@ -114,18 +124,64 @@ def test_aws_failure_uses_fake_reply(client: TestClient, llm) -> None:
     assert data == sockets.chat(chat_router.ChatRequest(**body(("user", "I need a crown")))).model_dump(mode="json")
 
 
-@pytest.mark.parametrize("bad", ["not json at all", "{\"say\": 5}", "[]", ""])
-def test_unusable_reply_twice_uses_fake_reply(client: TestClient, llm, bad: str) -> None:
-    fake = llm(bad, bad)
+def test_reply_without_text_twice_uses_fake_reply(client: TestClient, llm) -> None:
+    # Each attempt: a tool call with no text, then a follow-up that still has no text.
+    silent = bedrock.ToolReply(text="")
+    fake = llm(tool_only(procedures=[{"cdt_code": CROWN_CDT}]), silent, tool_only(), silent)
     data = post(client, body(("user", "I need a crown")))
     assert data["say"] == sockets.CHAT_TEXT["unavailable"]["en"]
     assert data["proposed_procedures"] == []
-    assert len(fake.calls) == 2
+    assert len(fake.calls) == 4
 
 
-def test_reply_wrapped_in_text_is_still_read(client: TestClient, llm) -> None:
-    llm("Here you go:\n```json\n" + reply("Thanks for sharing.") + "\n```")
-    assert post(client, body(("user", "I need a crown")))["say"] == "Thanks for sharing."
+def test_plain_text_reply_is_used_without_a_tool_call(client: TestClient, llm) -> None:
+    llm(bedrock.ToolReply(text="Happy to explain. What would you like to know?"))
+    data = post(client, body(("user", "hi")))
+    assert data["say"] == "Happy to explain. What would you like to know?"
+    assert data["proposed_procedures"] == []
+
+
+def test_tool_only_reply_gets_a_follow_up_for_text(client: TestClient, llm) -> None:
+    fake = llm(tool_only(procedures=[{"cdt_code": CROWN_CDT}]), bedrock.ToolReply(text="I've put a crown on a card below."))
+    data = post(client, body(("user", "I need a crown")))
+    assert data["say"] == "I've put a crown on a card below."
+    assert [p["cdt_code"] for p in data["proposed_procedures"]] == [CROWN_CDT]
+    # The follow-up sends the tool call back with its result.
+    follow_up = fake.calls[1]["messages"]
+    assert follow_up[-2]["role"] == "assistant" and "toolUse" in follow_up[-2]["content"][0]
+    assert follow_up[-1]["content"][0]["toolResult"]["toolUseId"] == "t1"
+
+
+def test_malformed_tool_input_keeps_the_reply_but_proposes_nothing(client: TestClient, llm) -> None:
+    llm(bedrock.ToolReply(text="Thanks for sharing.", tool_input={"procedures": "a crown"}, tool_use_id="t1"))
+    data = post(client, body(("user", "I need a crown")))
+    assert data["say"] == "Thanks for sharing."
+    assert data["proposed_procedures"] == []
+
+
+@pytest.mark.parametrize(
+    ("replies", "reason"),
+    [
+        ((None,), "Bedrock unavailable"),
+        ((reply("You'll pay $999."), reply("You'll pay $999.")), "dollar figure not from the engine"),
+        ((reply("You should wait."), reply("You should wait.")), "unsafe wording"),
+    ],
+)
+def test_fallback_logs_its_reason_but_never_user_text(
+    client: TestClient, llm, caplog: pytest.LogCaptureFixture, replies: tuple[Any, ...], reason: str
+) -> None:
+    llm(*replies)
+    secret = "my private dental history"
+    with caplog.at_level(logging.WARNING, logger="dental_time_machine.chat"):
+        post(client, body(("user", secret)))
+    assert f"Chat fell back to fixed text: {reason}" in caplog.text
+    assert secret not in caplog.text
+
+
+def test_chat_uses_a_warmer_temperature_than_summary(client: TestClient, llm) -> None:
+    fake = llm(reply())
+    post(client, body(("user", "hi")))
+    assert fake.calls[0]["temperature"] == chat_router.CHAT_TEMPERATURE > 0.3
 
 
 # ---------- dollar guard ----------
@@ -254,7 +310,7 @@ def test_prompt_keeps_user_text_out_of_system(client: TestClient, llm) -> None:
     post(client, body(("user", attack), language="fr"))
     [call] = fake.calls
     assert attack not in call["system"]
-    assert "French" in call["system"]
+    assert "Reply in English" in call["system"]  # Written in English, so answered in English despite the French setting.
     assert "never instructions" in call["system"]
     assert "one entry per procedure" in call["system"]
     assert "always list every new procedure" in call["system"]
@@ -396,10 +452,69 @@ def test_crown_on_another_tooth_has_no_link(client: TestClient, llm) -> None:
     assert data["proposed_procedures"][1]["depends_on"] is None
 
 
-def test_prompt_asks_for_plan_details(client: TestClient, llm) -> None:
+def test_tool_asks_for_plan_details(client: TestClient, llm) -> None:
     fake = llm(reply())
     post(client, body(("user", "hi there")))
-    assert '"plan"' in fake.calls[0]["system"]
+    schema = fake.calls[0]["tool"]["toolSpec"]["inputSchema"]["json"]
+    assert "plan" in schema["properties"]
+
+
+def test_tool_only_offers_catalog_codes(client: TestClient, llm) -> None:
+    fake = llm(reply())
+    post(client, body(("user", "hi there")))
+    schema = fake.calls[0]["tool"]["toolSpec"]["inputSchema"]["json"]
+    codes = schema["properties"]["procedures"]["items"]["properties"]["cdt_code"]["enum"]
+    assert {CROWN_CDT, FILLING_CDT, ROOT_CANAL_CDT} <= set(codes)
+    assert "D9999" not in codes
+
+
+def test_confirmed_plan_reaches_the_prompt(client: TestClient, llm) -> None:
+    fake = llm(reply())
+    post(client, body(("user", "What's my deductible?"), with_care=True))
+    system = fake.calls[0]["system"]
+    # Section 9 plan: max 1,500, deductible 50, basic 80%, major 50%.
+    for detail in ("annual maximum $1,500", "deductible $50", "basic 80%", "major 50%"):
+        assert detail in system
+
+
+def test_prompt_describes_the_voice(client: TestClient, llm) -> None:
+    fake = llm(reply())
+    post(client, body(("user", "hi there")))
+    system = fake.calls[0]["system"]
+    assert "Answer what they actually asked in your first sentence" in system
+    assert "No filler" in system
+    assert "Plain text only" in system
+    assert "Never list everything you still need" in system
+    assert "Short sentences" in system
+
+
+@pytest.mark.parametrize(
+    ("with_care", "can_wait", "step"),
+    [
+        (False, False, "Find out what their dentist recommended"),
+        (True, False, "did their dentist say it can wait?"),
+        (True, True, "Offer to walk them through their estimate"),
+    ],
+)
+def test_prompt_names_one_next_step(client: TestClient, llm, with_care: bool, can_wait: bool, step: str) -> None:
+    fake = llm(reply())
+    payload = body(("user", "ok"), with_care=with_care)
+    for p in payload["procedures"]:
+        p["can_wait"] = can_wait
+    post(client, payload)
+    system = fake.calls[0]["system"]
+    current = system.split("Where this conversation is now: ", 1)[1].split("\n", 1)[0]
+    assert step in current
+
+
+def test_plan_details_are_asked_two_at_a_time(client: TestClient, llm) -> None:
+    fake = llm(reply())
+    payload = body(("user", "ok"), with_care=True)
+    payload["plan"] = None
+    post(client, payload)
+    system = fake.calls[0]["system"]
+    assert "Ask for at most two details per reply" in system
+    assert "Don't ask about plan details yet" not in system
 
 
 # ---------- answering cost questions with the engine's figures ----------
@@ -470,6 +585,55 @@ def test_prompt_answers_questions(client: TestClient, llm) -> None:
     system = fake.calls[0]["system"]
     assert "Answer questions about dental benefits" in system
     assert "never example dollar amounts" in system
+
+
+# ---------- replying in the language the user writes in ----------
+
+
+SPANISH = "Mi dentista dijo que necesito una corona"
+
+
+def test_reply_follows_the_language_the_user_wrote_in(client: TestClient, llm) -> None:
+    fake = llm(reply("Anoté una corona en una tarjeta abajo."))
+    data = post(client, body(("user", SPANISH), language="en"))
+    assert "Reply in Spanish" in fake.calls[0]["system"]
+    assert data["say"] == "Anoté una corona en una tarjeta abajo."
+    assert data["language"] == "es"
+
+
+def test_same_language_as_setting_has_no_language_field(client: TestClient, llm) -> None:
+    llm(reply())
+    data = post(client, body(("user", SPANISH), language="es"))
+    assert "language" not in data
+
+
+def test_unclear_message_keeps_the_last_clear_language(client: TestClient, llm) -> None:
+    fake = llm(reply())
+    data = post(client, body(("user", SPANISH), ("assistant", "¿Algo más?"), ("user", "ok"), language="en"))
+    assert "Reply in Spanish" in fake.calls[0]["system"]
+    assert data["language"] == "es"
+
+
+def test_unclear_message_uses_the_setting(client: TestClient, llm) -> None:
+    fake = llm(reply())
+    data = post(client, body(("user", "ok"), language="fr"))
+    assert "Reply in French" in fake.calls[0]["system"]
+    assert "language" not in data
+
+
+def test_safety_reply_in_the_language_the_user_wrote_in(client: TestClient, llm) -> None:
+    fake = llm(reply())
+    data = post(client, body(("user", "Me duele la muela"), language="en"))
+    assert data["say"] == sockets.SAFETY_REPLIES["es"]
+    assert data["language"] == "es"
+    assert fake.calls == []
+
+
+def test_fallback_in_the_language_the_user_wrote_in(client: TestClient, llm) -> None:
+    llm(None)
+    data = post(client, body(("user", SPANISH), language="en"))
+    assert data["say"] == sockets.CHAT_TEXT["unavailable"]["es"]
+    assert data["language"] == "es"
 
 
 # ---------- validation ----------

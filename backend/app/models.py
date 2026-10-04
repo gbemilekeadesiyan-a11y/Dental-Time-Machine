@@ -286,6 +286,9 @@ class ChatResponse(_Model):
     done_intake: bool
     # Feature addition (feature/chat): plan details the user stated. Needs confirmation too.
     proposed_plan: PlanDetails | None = Field(default=None, exclude_if=_unset)
+    # Feature addition (feature/chat): set only when the reply is in a different language
+    # than the user's setting, because they wrote in it. Speech uses it for the voice.
+    language: Language | None = Field(default=None, exclude_if=_unset)
 
 
 class SummaryRequest(_Model):
