@@ -15,8 +15,11 @@ from __future__ import annotations
 
 import json
 import logging
+import os
+from pathlib import Path
 from typing import Any
 
+from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -49,7 +52,19 @@ from app.routers import narrate as narrate_router
 
 logger = logging.getLogger("dental_time_machine")
 
-FRONTEND_ORIGINS = ["http://localhost:5173"]
+LOCAL_FRONTEND = "http://localhost:5173"
+
+
+def frontend_origins(value: str | None) -> list[str]:
+    """Sites allowed to call the API, from FRONTEND_ORIGINS (comma-separated, e.g. the
+    Vercel frontend URL). Unset means the local dev server. "*" is ignored on purpose."""
+    origins = [o.strip().rstrip("/") for o in (value or "").split(",")]
+    origins = [o for o in origins if o and o != "*"]
+    return origins or [LOCAL_FRONTEND]
+
+
+load_dotenv(Path(__file__).resolve().parents[1] / ".env")
+FRONTEND_ORIGINS = frontend_origins(os.getenv("FRONTEND_ORIGINS"))
 
 # The largest legitimate request is about 30 KB (20 procedures at their field limits).
 MAX_BODY_BYTES = 64 * 1024
