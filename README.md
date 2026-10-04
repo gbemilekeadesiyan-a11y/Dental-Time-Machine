@@ -25,7 +25,7 @@ Right then, three questions hit at once:
 2. **"What does any of this mean?"** Benefits summaries are written in insurance language: deductible, coinsurance, annual maximum, plan year.
 3. **"Is there a cheaper way?"** Most dental plans cap what they pay each plan year. A big treatment plan goes past that cap, and you pay everything above it.
 
-<p align="center"><img src="docs/readme/01-the-problem.png" alt="Hand-drawn sketch: a small black creature tips a stack of dental bills (root canal, crowns, fillings) into a cup labeled yearly max $1,500. The cup overflows and the overflow is labeled everything over the cap comes out of your pocket." width="760"></p>
+<p align="center"><img src="01-the-problem.png" alt="Hand-drawn sketch: a small black creature tips a stack of dental bills (root canal, crowns, fillings) into a cup labeled yearly max $1,500. The cup overflows and the overflow is labeled everything over the cap comes out of your pocket." width="760"></p>
 
 **What happens today:** people agree to everything at once and get a surprise bill, put off care because they fear the cost, or let benefits go unused before the plan year resets.
 
