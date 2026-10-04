@@ -1,0 +1,85 @@
+/*
+ * Landing page styles that Tailwind classes can't express on their own:
+ * the self-hosted serif and the "clear window" geometry.
+ * Colors stay in Tailwind token classes (CLAUDE.md section 11).
+ */
+
+/* Instrument Serif Italic, latin subset, self-hosted (SIL Open Font License, see fonts/OFL.txt). */
+@font-face {
+  font-family: "Instrument Serif";
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url("./fonts/InstrumentSerif-Italic-latin.woff2") format("woff2");
+}
+
+.font-display-serif {
+  font-family: "Instrument Serif", Georgia, "Times New Roman", serif;
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+/*
+ * One rectangle drives three things: the sharp layer's clip, the frame, and where
+ * the headline halves sit. Phone first; the diagonal layout starts at 64rem.
+ */
+.focus-hero {
+  --win-w: min(30rem, 86vw);
+  --win-h: min(44svh, 26rem);
+  --win-r: 1.75rem;
+}
+
+@media (min-width: 64rem) {
+  .focus-hero {
+    --win-w: min(34rem, 44vw);
+    --win-h: min(62svh, 36rem);
+    --win-r: 2.25rem;
+  }
+}
+
+/* The sharp copy of the art, visible only inside the window. Same box as the blurred copy, so they always line up. */
+.focus-window-clip {
+  clip-path: inset(calc((100% - var(--win-h)) / 2) calc((100% - var(--win-w)) / 2) round var(--win-r));
+}
+
+.focus-window-frame {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--win-w);
+  height: var(--win-h);
+  transform: translate(-50%, -50%);
+  border-radius: var(--win-r);
+}
+
+/* Phone: "Same care" above the window, "Smarter timing" below it. */
+.headline-left {
+  position: absolute;
+  left: 1.25rem;
+  bottom: calc(50% + var(--win-h) / 2 + 0.75rem);
+}
+
+.headline-right {
+  position: absolute;
+  right: 1.25rem;
+  top: calc(50% + var(--win-h) / 2 + 0.75rem);
+  text-align: right;
+}
+
+/* Wide screens: a diagonal. Each half overlaps one edge of the window by 2.5rem. */
+@media (min-width: 64rem) {
+  .headline-left {
+    left: auto;
+    right: calc(50% + var(--win-w) / 2 - 2.5rem);
+    bottom: calc(50% - var(--win-h) / 2 + 2rem);
+    text-align: left;
+  }
+
+  .headline-right {
+    right: auto;
+    left: calc(50% + var(--win-w) / 2 - 2.5rem);
+    top: calc(50% - var(--win-h) / 2 + 2rem);
+    text-align: left;
+  }
+}

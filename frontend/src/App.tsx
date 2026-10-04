@@ -2,11 +2,11 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { useReducer, useState } from 'react'
 import { ArrowLeft, ArrowRight } from './components/Icons'
 import StepIndicator from './components/StepIndicator'
-import Start from './screens/Start'
 import TellUs from './screens/TellUs'
 import TwoFutures from './screens/TwoFutures'
 import WhatItMeans from './screens/WhatItMeans'
 import YourYear from './screens/YourYear'
+import Landing from './features/timeline/landing/Landing'
 import { initialState, reducer } from './state'
 
 interface ScreenDef {
@@ -46,43 +46,42 @@ export default function App() {
   const goBack = () => setView((v) => (v === 'start' ? v : v === 0 ? 'start' : ((v - 1) as ScreenIndex)))
   const goNext = () => setView((v) => (v === 'start' ? 0 : v < LAST ? ((v + 1) as ScreenIndex) : v))
 
+  // Mount point (feature/timeline): the landing page is full-width, outside the step layout.
+  if (view === 'start') return <Landing dispatch={dispatch} onStart={() => setView(0)} />
+
   return (
     <>
       <BackgroundBlobs />
       <div className="mx-auto flex min-h-screen max-w-4xl flex-col gap-8 px-4 py-6 sm:px-6 sm:py-8">
-        {view !== 'start' && (
-          <header className="flex flex-wrap items-center justify-between gap-3">
-            <h1 className="text-sm font-semibold tracking-tight text-ink">Dental Time Machine</h1>
-            <StepIndicator steps={SCREENS} current={view} onSelect={(i) => setView(i as ScreenIndex)} />
-          </header>
-        )}
+        <header className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-sm font-semibold tracking-tight text-ink">Dental Time Machine</h1>
+          <StepIndicator steps={SCREENS} current={view} onSelect={(i) => setView(i as ScreenIndex)} />
+        </header>
 
         <main className="flex-1">
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
-              key={view === 'start' ? 'start' : SCREENS[view].id}
+              key={SCREENS[view].id}
               initial={reduceMotion ? false : { opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={reduceMotion ? { opacity: 1 } : { opacity: 0, y: -10 }}
               transition={{ duration: 0.22, ease: 'easeOut' }}
             >
-              {view === 'start' ? <Start dispatch={dispatch} onStart={() => setView(0)} /> : renderScreen(view)}
+              {renderScreen(view)}
             </motion.div>
           </AnimatePresence>
         </main>
 
-        {view !== 'start' && (
-          <footer className="flex justify-between gap-3">
-            <button type="button" onClick={goBack} className="btn-secondary">
-              <ArrowLeft />
-              Back
-            </button>
-            <button type="button" onClick={goNext} disabled={view === LAST} className="btn-primary">
-              Next
-              <ArrowRight />
-            </button>
-          </footer>
-        )}
+        <footer className="flex justify-between gap-3">
+          <button type="button" onClick={goBack} className="btn-secondary">
+            <ArrowLeft />
+            Back
+          </button>
+          <button type="button" onClick={goNext} disabled={view === LAST} className="btn-primary">
+            Next
+            <ArrowRight />
+          </button>
+        </footer>
       </div>
     </>
   )
