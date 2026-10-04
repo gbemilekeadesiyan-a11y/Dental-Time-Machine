@@ -9,7 +9,7 @@ import WordReveal from './WordReveal'
 
 interface Props {
   dispatch: Dispatch<Action>
-  /** Opens Tell us. */
+  /** Opens Tell us. The app fades the page out and scrolls to the top. */
   onStart: () => void
 }
 
@@ -21,18 +21,13 @@ interface Props {
 export default function Landing({ dispatch, onStart }: Props) {
   const { load, loading, error } = useLoadMaya(dispatch)
 
-  function goToTellUs() {
-    window.scrollTo({ top: 0 })
-    onStart()
-  }
-
   async function seeMaya() {
-    if (await load()) goToTellUs()
+    if (await load()) onStart()
   }
 
   return (
     <div className="min-h-svh overflow-x-clip bg-bg text-ink">
-      <StickyBar onStart={goToTellUs} />
+      <StickyBar onStart={onStart} />
       <main>
         <FocusHero onSeeMaya={() => void seeMaya()} loading={loading} error={error} />
         <WordReveal />

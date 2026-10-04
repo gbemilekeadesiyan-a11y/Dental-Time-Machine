@@ -102,6 +102,48 @@ def test_errors_never_log_user_text(use_client, caplog: pytest.LogCaptureFixture
     assert SECRET_TEXT not in caplog.text
 
 
+# ---------- call_with_tool ----------
+
+TOOL = bedrock.tool_spec("record", "Record details.", {"type": "object", "properties": {}})
+
+
+def tool_reply(*blocks: dict[str, Any]) -> dict[str, Any]:
+    return {"output": {"message": {"role": "assistant", "content": list(blocks)}}}
+
+
+def test_call_with_tool_returns_text_and_tool_input(use_client) -> None:
+    use = {"toolUse": {"toolUseId": "t1", "name": "record", "input": {"x": 1}}}
+    client = use_client(FakeClient(tool_reply({"text": "Got it."}, use)))
+    reply = bedrock.call_with_tool(SYSTEM, user_says("Hi"), TOOL, temperature=0.7)
+    assert reply == bedrock.ToolReply(text="Got it.", tool_input={"x": 1}, tool_use_id="t1", content=[{"text": "Got it."}, use])
+    assert client.kwargs["toolConfig"] == {"tools": [TOOL], "toolChoice": {"auto": {}}}
+    assert client.kwargs["inferenceConfig"]["temperature"] == 0.7
+
+
+def test_call_with_tool_text_only(use_client) -> None:
+    use_client(FakeClient(tool_reply({"text": "Hello."})))
+    reply = bedrock.call_with_tool(SYSTEM, user_says("Hi"), TOOL)
+    assert reply is not None and reply.text == "Hello." and reply.tool_input is None
+
+
+def test_call_with_tool_ignores_other_tools(use_client) -> None:
+    other = {"toolUse": {"toolUseId": "t9", "name": "something_else", "input": {}}}
+    use_client(FakeClient(tool_reply({"text": "Hi."}, other)))
+    reply = bedrock.call_with_tool(SYSTEM, user_says("Hi"), TOOL)
+    assert reply is not None and reply.tool_use_id is None
+
+
+@pytest.mark.parametrize("reply", [tool_reply(), tool_reply({"text": "  "}), {}])
+def test_call_with_tool_empty_is_none(use_client, reply: dict[str, Any]) -> None:
+    use_client(FakeClient(reply))
+    assert bedrock.call_with_tool(SYSTEM, user_says("Hi"), TOOL) is None
+
+
+def test_call_with_tool_error_is_none(use_client) -> None:
+    use_client(FakeClient(error=ReadTimeoutError(endpoint_url="https://bedrock")))
+    assert bedrock.call_with_tool(SYSTEM, user_says("Hi"), TOOL) is None
+
+
 # ---------- client settings ----------
 
 
