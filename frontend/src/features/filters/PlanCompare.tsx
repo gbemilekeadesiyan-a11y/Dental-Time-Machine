@@ -65,7 +65,7 @@ export default function PlanCompare({ state, onEditCare }: Props) {
   const current = answer?.procedures === procedures && answer.plan === plan ? answer : null
 
   return (
-    <section aria-labelledby={titleId} className="glass space-y-5 rounded-3xl p-5 sm:p-6">
+    <section data-narrate="plan-compare" aria-labelledby={titleId} className="glass space-y-5 rounded-3xl p-5 sm:p-6">
       <div className="space-y-1">
         <h3 id={titleId} className="text-2xl font-semibold tracking-tight text-ink">
           Compare plan options

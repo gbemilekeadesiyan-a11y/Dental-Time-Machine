@@ -26,7 +26,7 @@ export default function FilterPanel() {
   const selfPay = f.payment === 'self_pay'
 
   return (
-    <div className="glass space-y-6 rounded-3xl p-5 sm:p-6">
+    <div data-narrate="filters" className="glass space-y-6 rounded-3xl p-5 sm:p-6">
       <h3 className="text-xl font-semibold tracking-tight text-ink">Filters</h3>
 
       <Group title="Where">

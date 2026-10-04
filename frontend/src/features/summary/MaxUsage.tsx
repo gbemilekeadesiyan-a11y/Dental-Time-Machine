@@ -22,7 +22,7 @@ export default function MaxUsage({ result, plan }: Props) {
   const usesNextYear = result.per_procedure.some((l) => l.year === 'next_year')
 
   return (
-    <article className="glass space-y-5 rounded-3xl p-6">
+    <article data-narrate="summary-max" className="glass space-y-5 rounded-3xl p-6">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <h3 className="text-xl font-semibold tracking-tight text-ink">Annual maximum</h3>
         <div className="flex flex-wrap items-start gap-2">

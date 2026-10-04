@@ -20,11 +20,11 @@ export default function TotalsCard({ result, optimized, procedures }: Props) {
     <div className="grid gap-4 md:grid-cols-[3fr_2fr]">
       <article className="glass space-y-6 rounded-3xl p-6">
         <div className="flex flex-wrap items-end justify-between gap-6">
-          <p>
+          <p data-narrate="summary-you">
             <span className="block text-sm text-muted-text">With the timing you chose, you&apos;ll likely pay</span>
             <AnimatedMoney value={you_pay} className="text-5xl font-light tracking-tight text-ink" />
           </p>
-          <p className="sm:text-right">
+          <p data-narrate="summary-plan" className="sm:text-right">
             <span className="block text-sm text-muted-text">Your plan likely pays</span>
             <AnimatedMoney value={plan_pays} className="text-2xl font-medium tracking-tight text-savings-deep" />
           </p>

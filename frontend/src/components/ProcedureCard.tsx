@@ -17,7 +17,7 @@ export default function ProcedureCard({ name, line }: Props) {
   const notes = line.reasons.map((r) => REASON_NOTES[r]).filter((n): n is string => n !== undefined)
 
   return (
-    <article className="glass space-y-2 rounded-3xl p-6">
+    <article data-narrate={`proc-${line.id}`} className="glass space-y-2 rounded-3xl p-6">
       <header className="flex items-start justify-between gap-3">
         <h3 className="font-semibold text-ink">{name}</h3>
         {line.year === 'next_year' && (

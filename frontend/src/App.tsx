@@ -12,6 +12,7 @@ import YourYear from './screens/YourYear'
 import Landing from './features/timeline/landing/Landing'
 import ChatIntake from './features/chat/ChatIntake'
 import ChatSummary from './features/chat/ChatSummary'
+import GuideDock from './features/chat/guide/GuideDock'
 import SummaryScreen from './features/summary/SummaryScreen'
 import { NAV, stepOf } from './copy'
 import { initialState, reducer } from './state'
@@ -175,6 +176,8 @@ export default function App() {
               </button>
             </footer>
           </Container>
+          {/* Mount point (feature/guide): the step-by-step guide, outside the sliding page so it stays put. */}
+          <GuideDock state={state} screen={SCREENS[view].id} onGo={(id) => go(SCREENS.findIndex((s) => s.id === id) as ScreenIndex)} />
         </motion.div>
       )}
     </AnimatePresence>

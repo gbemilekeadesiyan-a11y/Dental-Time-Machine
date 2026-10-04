@@ -93,6 +93,10 @@ Feature additions (approved, all optional; any teammate may add them on their br
 - Plan.annual_premium (optional): needed for a fair cash vs insurance comparison
 - OptimizeRequest.budget_this_year (optional): cap on this year's you_pay (Kuwa's budget filter)
 - OptimizeResult.alternatives (optional): top 5 valid schedules [{schedule, you_pay, moved}] for Samuel's timeline permutations
+- NarrateStep: "what_it_means"|"two_futures"|"summary"|"find_care"|"your_year"
+- NarrateRequest: step (NarrateStep), preferences, procedures [Procedure], plan, schedule
+- NarrateSegment: text (guarded), target (data-narrate id | null), pause_ms
+- NarrateResponse: segments [NarrateSegment], next_step (NarrateStep | null), next_label
 
 ## 7. API contract
 MVP (frozen):
@@ -106,6 +110,7 @@ MVP (frozen):
 | POST | /explain | {term, language, style} | {text} (fake fallback) |
 Feature additions (approved):
 | POST | /chat | ChatRequest | ChatResponse | Malama |
+| POST | /narrate | NarrateRequest | NarrateResponse (no LLM in v1: templates filled with engine figures) | Malama (guide) |
 | POST | /summary | SummaryRequest | SummaryResponse | Malama (text) |
 | POST | /speak | {text, language} | audio/mpeg (Polly) | Malama |
 | POST | /read-document | multipart file (pdf/jpg/png, max 5 MB) | DocumentReadResult | Chuck |
@@ -149,6 +154,7 @@ Malama (branch feature/chat): personalization, language understanding, voice cha
 - End of flow: /summary writes a recap of the engine's results in the user's language and style; spoken with Polly if voice_on. Uses only figures from the OptimizeResult/Result passed in.
 - Voice: push-to-talk with Web Speech API (lang matches preferences), Polly voice per language. Show the transcript. Text input always available.
 - Owns ai/bedrock.py and ai/dollar_guard.py (shared by Chuck and Iyin).
+- Guide narration (branch feature/guide): after intake, a guide walks the user through What it means, Two futures, Summary, Find care and Your year. backend/app/narrate.py fills fixed templates (en, es, fr, pt; simple and detailed styles) with engine figures; every segment passes the dollar guard or is dropped; each step ends with the disclaimer; the reset wording is the section 12 sentence. The frontend GuideDock (features/chat/guide/) shows captions (always visible), speaks them with Polly when voice_on, highlights the element with the matching data-narrate attribute, and offers the next step with a button (never navigates on its own). It starts only after a user click; any failure hides it and the app works as before.
 
 Chuck (branch feature/documents): document upload and AI reading
 - Upload a benefits summary, plan page, or dentist treatment estimate (pdf/jpg/png, max 5 MB, resized in browser).

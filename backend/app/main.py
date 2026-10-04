@@ -45,6 +45,7 @@ from app.routers import documents, term_explainer
 from app.routers import chat as chat_router
 from app.routers import filters
 from app.routers import plans as plans_router
+from app.routers import narrate as narrate_router
 
 logger = logging.getLogger("dental_time_machine")
 
@@ -153,6 +154,7 @@ app.include_router(filters.router)
 app.include_router(plans_router.router)  # Compare plan options (feature/plan-compare)
 
 app.include_router(chat_router.router)
+app.include_router(narrate_router.router)  # The step-by-step guide (feature/guide)
 
 
 # ---------- plain-English validation messages ----------
@@ -168,6 +170,7 @@ _TOP_LABELS = {
     "budget_this_year": "Budget this year",
     "plan_options": "Plan options",
     "my_plan": "Your plan",
+    "step": "Step",  # POST /narrate (feature/guide)
 }
 _PROCEDURE_LABELS = {
     "id": "id",
