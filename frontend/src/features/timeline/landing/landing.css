@@ -83,3 +83,15 @@
     text-align: left;
   }
 }
+
+/*
+ * Graph paper behind the "How it works" section only: 1px primary lines at 5% on a
+ * 32px grid. A quiet nod to calendars and plan years.
+ */
+.graph-paper {
+  background-color: var(--color-bg);
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--color-primary) 5%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--color-primary) 5%, transparent) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
