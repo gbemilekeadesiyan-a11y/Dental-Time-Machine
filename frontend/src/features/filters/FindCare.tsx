@@ -6,6 +6,7 @@ import AssistantBar from './AssistantBar'
 import CostCheck from './CostCheck'
 import DentistResults from './DentistResults'
 import FilterPanel from './FilterPanel'
+import PlanCompare from './PlanCompare'
 import { FILTER_LABELS, activeKeys, describeValue } from './filterOptions'
 import { clearAllFilters, clearFilter, useFilterStore } from './filterStore'
 
@@ -41,6 +42,8 @@ export default function FindCare({ state, onEditCare }: Props) {
       <FilterPanel />
       {ageNote && <Notice>{ageNote}</Notice>}
       <CostCheck filters={filters} myPlan={state.plan} onEditCare={onEditCare} />
+      {/* Mount point (feature/plan-compare): the user's care priced under each plan option. */}
+      <PlanCompare state={state} onEditCare={onEditCare} />
       <DentistResults filters={filters} />
       <Disclaimer />
     </section>

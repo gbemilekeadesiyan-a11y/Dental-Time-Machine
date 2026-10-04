@@ -17,6 +17,9 @@ import type {
   OptimizeRequest,
   OptimizeResult,
   ParseRequest,
+  PlanCompareRequest,
+  PlanComparison,
+  PlanOption,
   Procedure,
   Result,
   SummaryRequest,
@@ -188,6 +191,16 @@ export async function speak(text: string, language: Language, options: RequestOp
 export function getDentists(zip: string, maxDistanceMiles: number, options?: RequestOptions): Promise<DentistSearchResponse> {
   const query = new URLSearchParams({ zip, max_distance_miles: String(maxDistanceMiles) })
   return get<DentistSearchResponse>(`/dentists?${query.toString()}`, options)
+}
+
+/** GET /plans: the employer's demo plan options. */
+export function getPlans(options?: RequestOptions): Promise<PlanOption[]> {
+  return get<PlanOption[]>('/plans', options)
+}
+
+/** POST /filters/apply: the care priced under each plan option, sorted by the likely total. Compares, never recommends. */
+export function comparePlans(body: PlanCompareRequest, options?: RequestOptions): Promise<PlanComparison[]> {
+  return post<PlanComparison[]>('/filters/apply', body, options)
 }
 
 /** POST /filters/parse: the filters a plain-language request changes. Only changed keys come back. */

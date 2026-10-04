@@ -44,6 +44,7 @@ from app.optimizer import optimize
 from app.routers import documents, term_explainer
 from app.routers import chat as chat_router
 from app.routers import filters
+from app.routers import plans as plans_router
 
 logger = logging.getLogger("dental_time_machine")
 
@@ -149,6 +150,7 @@ app.add_middleware(
     allow_headers=["Content-Type"],
 )
 app.include_router(filters.router)
+app.include_router(plans_router.router)  # Compare plan options (feature/plan-compare)
 
 app.include_router(chat_router.router)
 
@@ -164,6 +166,8 @@ _TOP_LABELS = {
     "language": "Language",
     "style": "Style",
     "budget_this_year": "Budget this year",
+    "plan_options": "Plan options",
+    "my_plan": "Your plan",
 }
 _PROCEDURE_LABELS = {
     "id": "id",
@@ -273,6 +277,8 @@ def _sentence(error: dict[str, Any]) -> str:
             return f"You can add at most {limit} procedures."
         if parts == ["plan", "deductible_waived_for"]:
             return f"{label} can have at most {limit} categories."
+        if parts == ["plan_options"]:
+            return f"You can compare at most {limit} plan options."
         if parts == ["schedule"]:
             return f"The schedule can have at most {limit} entries."
         return f"{label} has too many items."
