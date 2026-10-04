@@ -179,6 +179,45 @@ def test_key_is_trimmed(client: TestClient, eleven, polly_says) -> None:
     assert fake.calls[0]["headers"]["xi-api-key"] == KEY
 
 
+@pytest.mark.parametrize(
+    ("key", "voice_id", "model"),
+    [
+        # Hosting dashboards keep values exactly as pasted: quotes or a whole "NAME=value" line.
+        (f'"{KEY}"', f"'{VOICE_ID}'", '"eleven_flash_v2_5"'),
+        (f"ELEVENLABS_API_KEY={KEY}", f"ELEVENLABS_VOICE_ID={VOICE_ID}", "ELEVENLABS_MODEL_ID=eleven_flash_v2_5"),
+        (f' "{KEY}" ', f" {VOICE_ID}", " eleven_flash_v2_5 \n"),
+    ],
+    ids=["quotes", "name=value", "spaces"],
+)
+def test_settings_pasted_with_quotes_or_names_still_work(
+    client: TestClient, eleven, polly_says, monkeypatch, key: str, voice_id: str, model: str
+) -> None:
+    fake = eleven(key=key, voice_id=voice_id)
+    monkeypatch.setenv("ELEVENLABS_MODEL_ID", model)
+    polly_says()
+    assert speak(client).headers["x-voice"] == "elevenlabs"
+    call = fake.calls[0]
+    assert call["headers"]["xi-api-key"] == KEY
+    assert call["url"] == f"https://api.elevenlabs.io/v1/text-to-speech/{VOICE_ID}?output_format=mp3_44100_128"
+    assert call["json"]["model_id"] == "eleven_flash_v2_5"
+
+
+def test_failure_log_says_why_without_secrets(client: TestClient, eleven, polly_says, caplog) -> None:
+    # What ElevenLabs answers for a voice id that isn't one (e.g. the voice's name was pasted).
+    caplog.set_level(logging.WARNING)
+    body = b'{"detail": {"status": "invalid_uid", "message": "An invalid ID has been received: Dental Time Machine"}}'
+    eleven(FakeHttp(status=400, content=body), voice_id="Dental Time Machine")
+    polly_says()
+    speak(client)
+    assert "HTTP 400" in caplog.text
+    assert "invalid_uid" in caplog.text
+    # The shape of the settings, never the key: voice id length and whether it looks like an id, the model.
+    assert "voice id 19 chars, not an id" in caplog.text
+    assert "model eleven_flash_v2_5" in caplog.text
+    assert KEY not in caplog.text and SAID not in caplog.text
+    assert "An invalid ID has been received" not in caplog.text  # ElevenLabs' message can echo input.
+
+
 # ---------- cache ----------
 
 

@@ -48,13 +48,43 @@ def with_breaks(text: str) -> str:
     return _SENTENCE_END.sub(f" {_BREAK} ", text.strip())
 
 
+# What the log may show about the settings: never the key, only whether the others look right.
+_LOOKS_LIKE_ID = re.compile(r"^[A-Za-z0-9]{10,40}$")
+_SAFE_TOKEN = re.compile(r"^[a-z0-9_]{1,40}$")
+
+
+def _setting(name: str) -> str:
+    """A setting as it may have been pasted into a hosting dashboard, tidied: surrounding
+    spaces and quotes and an accidental leading "NAME=" are removed. Locally, .env does this."""
+    value = os.getenv(name, "").strip()
+    if value.startswith(f"{name}="):
+        value = value[len(name) + 1 :].strip()
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
+        value = value[1:-1].strip()
+    return value
+
+
 def _settings() -> tuple[str, str, str] | None:
-    """(key, voice id, model id), or None when ElevenLabs isn't set up. Values are trimmed."""
-    key = os.getenv("ELEVENLABS_API_KEY", "").strip()
-    voice_id = os.getenv("ELEVENLABS_VOICE_ID", "").strip()
+    """(key, voice id, model id), or None when ElevenLabs isn't set up."""
+    key = _setting("ELEVENLABS_API_KEY")
+    voice_id = _setting("ELEVENLABS_VOICE_ID")
     if not key or not voice_id:
         return None
-    return key, voice_id, os.getenv("ELEVENLABS_MODEL_ID", "").strip() or DEFAULT_MODEL
+    return key, voice_id, _setting("ELEVENLABS_MODEL_ID") or DEFAULT_MODEL
+
+
+def _why(response: httpx.Response, voice_id: str, model: str) -> str:
+    """ElevenLabs' short reason code (like "invalid_uid") and the shape of the settings, for the
+    log. Its free-text message isn't kept: it can echo what was sent."""
+    try:
+        detail = response.json().get("detail")
+        reason = detail.get("status", "") if isinstance(detail, dict) else ""
+    except Exception:  # noqa: BLE001 - no JSON body: no reason to show
+        reason = ""
+    reason = reason if _SAFE_TOKEN.match(reason or "") else "no reason given"
+    shape = "looks like an id" if _LOOKS_LIKE_ID.match(voice_id) else "not an id"
+    model_text = model if _SAFE_TOKEN.match(model) else f"that doesn't look right ({len(model)} chars)"
+    return f"{reason}; voice id {len(voice_id)} chars, {shape}; model {model_text}"
 
 
 def speak_elevenlabs(text: str, language: Language) -> bytes | None:
@@ -79,7 +109,7 @@ def speak_elevenlabs(text: str, language: Language) -> bytes | None:
         logger.warning("ElevenLabs call failed: %s", type(exc).__name__)
         return None
     if response.status_code != 200:
-        logger.warning("ElevenLabs call failed: HTTP %d", response.status_code)
+        logger.warning("ElevenLabs call failed: HTTP %d (%s)", response.status_code, _why(response, voice_id, model))
         return None
     return response.content or None
 
