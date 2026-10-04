@@ -227,6 +227,7 @@ MAX_CHAT_TURNS = 20
 MAX_DISTANCE_MILES = 500
 MAX_LANGUAGES = 10
 MAX_SHORT_TEXT = 200
+MAX_TERMS_FOUND = 8
 
 Language = Literal["en", "es", "fr", "pt"]
 Style = Literal["simple", "detailed", "numbers"]
@@ -308,6 +309,9 @@ class DocumentReadResult(_Model):
     procedures: Annotated[list[Procedure], Field(max_length=MAX_PROCEDURES)]
     fields_found: list[str]
     warnings: list[str]
+    # Feature addition (feature/documents): confusing insurance terms printed in the
+    # document, as short plain labels for the reveal cards. Letters only, so no money.
+    terms_found: Annotated[list[str], Field(max_length=MAX_TERMS_FOUND)] = []
 
 
 class FilterState(_Model):
