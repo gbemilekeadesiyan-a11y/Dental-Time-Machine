@@ -2,7 +2,7 @@
 export const HERO_PHOTO = '/landing/hero.webp'
 
 /**
- * The hero photo: a dentist's gloved hands with a mirror and probe at a smiling patient.
+ * The hero photo: a dentist showing a smiling patient her X-ray on a tablet, in a bright clinic.
  *
  * "fit": about 70% of the screen, centered, no backdrop. FocusHero draws it twice
  * (blurred behind, sharp in the window); positioning lives in landing.css (.hero-photo).
