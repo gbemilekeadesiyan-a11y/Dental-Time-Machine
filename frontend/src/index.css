@@ -13,6 +13,7 @@
 @theme {
   --color-primary: #3c4aa1;
   --color-primary-deep: #3542a2;
+  --color-primary-night: #262f78; /* hover fill for primary buttons: white text 11.9:1 */
   --color-gradient-from: #5468ae; /* darkened from #647cbf so white text is 5.29:1 */
   --color-gradient-to: #3d4fa7;
   --color-savings: #589c7d; /* fills and graphics */
@@ -74,6 +75,11 @@ body {
 }
 
 /* Pill buttons. 44 px tall to meet Apple's default control size. */
+/*
+ * Each pill sets --roll-fill (the color that wipes up on hover) and --roll-text (the
+ * label color on top of it). The shared hover animation is at the end of this file.
+ * Focus ring color: --focus-ring (default primary; set it to white on dark backgrounds).
+ */
 @utility btn-primary {
   display: inline-flex;
   align-items: center;
@@ -86,14 +92,14 @@ body {
   color: #fff;
   font-weight: 500;
   box-shadow: 0 6px 18px rgb(60 74 161 / 0.25);
-  transition: background-color 150ms, box-shadow 150ms;
+  --roll-fill: var(--color-primary-night);
+  --roll-text: #fff;
 
   &:hover:not(:disabled) {
-    background-color: var(--color-primary-deep);
     box-shadow: 0 8px 22px rgb(60 74 161 / 0.32);
   }
   &:focus-visible {
-    outline: 2px solid var(--color-primary);
+    outline: 2px solid var(--focus-ring, var(--color-primary));
     outline-offset: 3px;
   }
   &:disabled {
@@ -115,14 +121,70 @@ body {
   border: 1px solid var(--color-muted);
   color: var(--color-ink);
   font-weight: 500;
-  transition: border-color 150ms, color 150ms;
+  --roll-fill: var(--color-primary);
+  --roll-text: #fff;
 
-  &:hover:not(:disabled) {
-    border-color: var(--color-primary);
-    color: var(--color-primary);
-  }
   &:focus-visible {
-    outline: 2px solid var(--color-primary);
+    outline: 2px solid var(--focus-ring, var(--color-primary));
+    outline-offset: 3px;
+  }
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+}
+
+/* White pill with ink text, for photo or dark backgrounds and over images. */
+@utility btn-light {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  padding: 0.625rem 1.25rem;
+  border-radius: 9999px;
+  background-color: var(--color-card);
+  border: 1px solid transparent;
+  color: var(--color-ink);
+  font-weight: 500;
+  --roll-fill: var(--color-primary);
+  --roll-text: #fff;
+
+  /* A thin white edge around the blue fill, so it stays visible on blue or dark backgrounds. */
+  &:focus-visible {
+    border-color: #fff;
+    outline: 2px solid var(--focus-ring, var(--color-primary));
+    outline-offset: 3px;
+  }
+  @media (hover: hover) {
+    &:hover:not(:disabled) {
+      border-color: #fff;
+    }
+  }
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+}
+
+/* White pill with a primary edge and primary text. */
+@utility btn-outline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  padding: 0.625rem 1.25rem;
+  border-radius: 9999px;
+  background-color: var(--color-card);
+  border: 1px solid var(--color-primary);
+  color: var(--color-primary);
+  font-weight: 500;
+  --roll-fill: var(--color-primary);
+  --roll-text: #fff;
+
+  &:focus-visible {
+    outline: 2px solid var(--focus-ring, var(--color-primary));
     outline-offset: 3px;
   }
   &:disabled {
@@ -145,5 +207,120 @@ body {
     outline: 2px solid var(--color-primary);
     outline-offset: 1px;
     border-color: var(--color-primary);
+  }
+}
+
+/*
+ * Shared pill hover: a fill wipes up from the bottom while the label rolls up and out
+ * and a copy (already in --roll-text) rolls in from below. Reverses on leave. Keyboard
+ * focus shows the same state. Wrap the label in <RollLabel>; screen readers hear it once.
+ */
+@layer utilities {
+  /* Zero specificity, so classes like "absolute" still win. */
+  :where(.btn-primary, .btn-secondary, .btn-light, .btn-outline) {
+    position: relative;
+  }
+
+  :is(.btn-primary, .btn-secondary, .btn-light, .btn-outline) {
+    overflow: hidden;
+    isolation: isolate;
+    --roll-time: 420ms;
+    --roll-ease: cubic-bezier(0.65, 0, 0.35, 1);
+    transition:
+      box-shadow 150ms,
+      scale 150ms,
+      border-color var(--roll-time) var(--roll-ease),
+      color var(--roll-time) var(--roll-ease);
+  }
+
+  /* The fill. clip-path (not scaleY) keeps its top edge flat while it rises. */
+  :is(.btn-primary, .btn-secondary, .btn-light, .btn-outline)::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    z-index: -1;
+    background: var(--roll-fill);
+    clip-path: inset(100% 0 0 0);
+    transition: clip-path var(--roll-time) var(--roll-ease);
+  }
+  /* btn-light keeps its thin white edge visible around the fill. */
+  .btn-light::before {
+    inset: 0;
+  }
+
+  @media (hover: hover) {
+    :is(.btn-primary, .btn-secondary, .btn-light, .btn-outline):hover:not(:disabled)::before {
+      clip-path: inset(0);
+    }
+    :is(.btn-primary, .btn-secondary, .btn-light, .btn-outline):hover:not(:disabled):not(:has(> .roll)) {
+      color: var(--roll-text);
+    }
+    :is(.btn-primary, .btn-secondary, .btn-light, .btn-outline):hover:not(:disabled) .roll-a {
+      transform: translateY(-115%);
+    }
+    :is(.btn-primary, .btn-secondary, .btn-light, .btn-outline):hover:not(:disabled) .roll-b {
+      transform: translateY(0);
+    }
+  }
+  :is(.btn-primary, .btn-secondary, .btn-light, .btn-outline):focus-visible::before {
+    clip-path: inset(0);
+  }
+  :is(.btn-primary, .btn-secondary, .btn-light, .btn-outline):focus-visible:not(:has(> .roll)) {
+    color: var(--roll-text);
+  }
+  :is(.btn-primary, .btn-secondary, .btn-light, .btn-outline):focus-visible .roll-a {
+    transform: translateY(-115%);
+  }
+  :is(.btn-primary, .btn-secondary, .btn-light, .btn-outline):focus-visible .roll-b {
+    transform: translateY(0);
+  }
+  :is(.btn-primary, .btn-secondary, .btn-light, .btn-outline):active:not(:disabled) {
+    scale: 0.98;
+  }
+
+  /* The rolling label. Padding with a matching negative margin keeps letters unclipped. */
+  .roll {
+    display: inline-grid;
+    overflow: hidden;
+    gap: inherit;
+    padding-block: 0.15em;
+    margin-block: -0.15em;
+  }
+  .roll > span {
+    grid-area: 1 / 1;
+    display: inline-flex;
+    align-items: center;
+    gap: inherit;
+    transition: transform var(--roll-time) var(--roll-ease);
+  }
+  .roll-b {
+    transform: translateY(115%);
+    color: var(--roll-text);
+  }
+
+  /* Reduced motion: no movement. Colors switch instantly and the second copy is hidden. */
+  @media (prefers-reduced-motion: reduce) {
+    :is(.btn-primary, .btn-secondary, .btn-light, .btn-outline),
+    :is(.btn-primary, .btn-secondary, .btn-light, .btn-outline)::before,
+    .roll > span {
+      transition: none;
+    }
+    :is(.btn-primary, .btn-secondary, .btn-light, .btn-outline):active:not(:disabled) {
+      scale: none;
+    }
+    /* .roll > .roll-b beats the .roll > span layout rule above. */
+    .roll > .roll-b {
+      display: none;
+    }
+    :is(.btn-primary, .btn-secondary, .btn-light, .btn-outline):focus-visible .roll-a {
+      transform: none;
+      color: var(--roll-text);
+    }
+    @media (hover: hover) {
+      :is(.btn-primary, .btn-secondary, .btn-light, .btn-outline):hover:not(:disabled) .roll-a {
+        transform: none;
+        color: var(--roll-text);
+      }
+    }
   }
 }

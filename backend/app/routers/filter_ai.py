@@ -1,7 +1,8 @@
 """Bedrock version of the filter parser (feature/filters).
 
-Claude Haiku on Amazon Bedrock reads the user's message and fills a set_filters
-tool call. The answer is checked before anything reaches the user:
+Claude Haiku on Amazon Bedrock (through the shared ai/bedrock.py helper) reads the
+user's message and answers with a JSON object of filter changes. The answer is
+checked before anything reaches the user:
 
 - Each field is validated on its own against FilterChanges; bad fields are dropped.
 - Numbers (miles, budget, ZIP) must appear in the user's own text, so the model
@@ -9,35 +10,26 @@ tool call. The answer is checked before anything reaches the user:
 - The symptom safety note always comes from the fixed rules, never the model.
 
 Any AWS error, timeout (8 s) or unusable answer falls back to the rule-based
-parser, so the demo never breaks. When Malama's shared ai/bedrock.py lands,
-_converse() is the one place to swap in her helper.
-
-Keys come from backend/.env (git-ignored). Nothing here logs the user's text.
+parser, so the demo never breaks. Keys come from backend/.env (git-ignored),
+loaded by ai/bedrock.py. Nothing here logs the user's text.
 """
 
 from __future__ import annotations
 
-import logging
-import os
+import json
 import re
-from pathlib import Path
 from typing import Any
 
 from pydantic import ValidationError
 
+from app.ai import bedrock
 from app.routers.filter_models import MAX_SEARCH_MILES, MIN_DISTANCE_MILES, FilterChanges, FilterParseResponse
 from app.routers.filter_parser import NOTHING_FOUND_NOTE, SAFETY_NOTE, parse_filters
 from app.sockets import _SYMPTOMS
 
-logger = logging.getLogger("dental_time_machine")
-
-MODEL_ID = os.environ.get("FILTER_AI_MODEL", "us.anthropic.claude-haiku-4-5-20251001-v1:0")
-TIMEOUT_SECONDS = 8
-ENV_FILE = Path(__file__).resolve().parents[2] / ".env"
-TOOL_NAME = "set_filters"
-
-SYSTEM_PROMPT = """You turn one message from a person looking for a dentist into search filter changes.
-Call the set_filters tool exactly once.
+SYSTEM_PROMPT_TEMPLATE = """You turn one message from a person looking for a dentist into search filter changes.
+Answer with one JSON object and nothing else. It must follow this JSON schema:
+{schema}
 
 Rules:
 - Only include filters the message clearly asks for. Leave everything else out: left-out filters keep their current value.
@@ -86,72 +78,26 @@ TOOL_SCHEMA: dict[str, Any] = {
     "additionalProperties": False,
 }
 
-_client: Any = None
-
-
 class AiUnavailable(Exception):
     """Bedrock couldn't give a usable answer. The caller falls back to the rules."""
 
 
-def _load_env() -> None:
-    """Read backend/.env into the environment once. Values already set win."""
-    if not ENV_FILE.exists():
-        return
-    for line in ENV_FILE.read_text(encoding="utf-8").splitlines():
-        line = line.strip()
-        if line and not line.startswith("#") and "=" in line:
-            key, value = line.split("=", 1)
-            if value.strip():
-                os.environ.setdefault(key.strip(), value.strip().strip("\"'"))
-
-
-def _bedrock() -> Any:
-    global _client
-    if _client is None:
-        _load_env()
-        if not (os.environ.get("AWS_ACCESS_KEY_ID") and os.environ.get("AWS_SECRET_ACCESS_KEY")):
-            raise AiUnavailable("no AWS keys")
-        import boto3
-        from botocore.config import Config
-
-        _client = boto3.client(
-            "bedrock-runtime",
-            region_name=os.environ.get("AWS_DEFAULT_REGION", "us-east-1"),
-            config=Config(
-                connect_timeout=TIMEOUT_SECONDS,
-                read_timeout=TIMEOUT_SECONDS,
-                retries={"max_attempts": 1, "mode": "standard"},
-            ),
-        )
-    return _client
+SYSTEM_PROMPT = SYSTEM_PROMPT_TEMPLATE.format(schema=json.dumps(TOOL_SCHEMA))
 
 
 def _converse(text: str) -> dict[str, Any]:
-    """One Bedrock call. Returns the set_filters tool input."""
-    from botocore.exceptions import BotoCoreError, ClientError
-
+    """One Bedrock call through the shared helper. Returns the JSON object it answered with."""
+    reply = bedrock.call(SYSTEM_PROMPT, bedrock.text_messages([("user", text)]), max_tokens=400, temperature=0)
+    if reply is None:
+        raise AiUnavailable("no reply")  # The helper already logged the error type.
+    match = re.search(r"\{.*\}", reply, re.S)  # Tolerate ```json fences around the object.
     try:
-        response = _bedrock().converse(
-            modelId=MODEL_ID,
-            system=[{"text": SYSTEM_PROMPT}],
-            messages=[{"role": "user", "content": [{"text": text}]}],
-            inferenceConfig={"maxTokens": 400, "temperature": 0},
-            toolConfig={
-                "tools": [{"toolSpec": {"name": TOOL_NAME, "description": "Set dentist search filters.",
-                                        "inputSchema": {"json": TOOL_SCHEMA}}}],
-                "toolChoice": {"tool": {"name": TOOL_NAME}},
-            },
-        )
-    except (BotoCoreError, ClientError) as exc:
-        # One line, no message text (it could echo the request).
-        logger.warning("Filter AI unavailable: %s", type(exc).__name__)
-        raise AiUnavailable(type(exc).__name__) from None
-
-    for block in response.get("output", {}).get("message", {}).get("content", []):
-        tool_use = block.get("toolUse")
-        if tool_use and tool_use.get("name") == TOOL_NAME and isinstance(tool_use.get("input"), dict):
-            return tool_use["input"]
-    raise AiUnavailable("no tool call")
+        answer = json.loads(match.group(0)) if match else None
+    except json.JSONDecodeError:
+        answer = None
+    if not isinstance(answer, dict):
+        raise AiUnavailable("not a JSON object")
+    return answer
 
 
 def _numbers_in(text: str) -> set[float]:

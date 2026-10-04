@@ -3,12 +3,17 @@ import { useReducer, useState } from 'react'
 import { ArrowLeft, ArrowRight } from './components/Icons'
 import StepIndicator from './components/StepIndicator'
 import FindCare from './features/filters/FindCare'
-import Start from './screens/Start'
 import TellUs from './screens/TellUs'
 import TwoFutures from './screens/TwoFutures'
 import WhatItMeans from './screens/WhatItMeans'
 import YourYear from './screens/YourYear'
+import Landing from './features/timeline/landing/Landing'
+import ChatIntake from './features/chat/ChatIntake'
+import ChatSummary from './features/chat/ChatSummary'
+import PreferencesPicker from './features/chat/PreferencesPicker'
+import SummaryScreen from './features/summary/SummaryScreen'
 import { initialState, reducer } from './state'
+import RollLabel from './components/RollLabel'
 
 interface ScreenDef {
   id: string
@@ -19,13 +24,14 @@ const SCREENS = [
   { id: 'tell-us', label: 'Tell us' },
   { id: 'what-it-means', label: 'What it means' },
   { id: 'two-futures', label: 'Two futures' },
+  { id: 'summary', label: 'Summary' }, // Mount point (feature/summary)
+  { id: 'find-care', label: 'Find care' }, // Mount point (feature/filters)
   { id: 'your-year', label: 'Your year' },
-  { id: 'find-care', label: 'Find care' },
 ] as const satisfies readonly ScreenDef[]
 
-type ScreenIndex = 0 | 1 | 2 | 3 | 4
+type ScreenIndex = 0 | 1 | 2 | 3 | 4 | 5
 type View = 'start' | ScreenIndex
-const LAST: ScreenIndex = 4
+const LAST: ScreenIndex = 5
 
 export default function App() {
   const [view, setView] = useState<View>('start')
@@ -35,58 +41,77 @@ export default function App() {
   function renderScreen(current: ScreenIndex) {
     switch (current) {
       case 0:
-        return <TellUs state={state} dispatch={dispatch} />
+        return (
+          <div className="space-y-6">
+            {/* Mount point (feature/chat): voice/text intake above the form. */}
+            <ChatIntake state={state} dispatch={dispatch} />
+            <TellUs state={state} dispatch={dispatch} />
+          </div>
+        )
       case 1:
         return <WhatItMeans state={state} onEditCare={() => setView(0)} />
       case 2:
         return <TwoFutures state={state} dispatch={dispatch} onEditCare={() => setView(0)} />
       case 3:
-        return <YourYear state={state} onEditCare={() => setView(0)} />
+        return (
+          <div className="space-y-6">
+            <SummaryScreen state={state} onEditCare={() => setView(0)} />
+            {/* Mount point (feature/chat): the chatbot recap under the visual summary. */}
+            <ChatSummary state={state} />
+          </div>
+        )
       case 4:
         return <FindCare state={state} onEditCare={() => setView(0)} />
+      case 5:
+        return <YourYear state={state} onEditCare={() => setView(0)} />
     }
   }
 
   const goBack = () => setView((v) => (v === 'start' ? v : v === 0 ? 'start' : ((v - 1) as ScreenIndex)))
   const goNext = () => setView((v) => (v === 'start' ? 0 : v < LAST ? ((v + 1) as ScreenIndex) : v))
 
+  // Mount point (feature/timeline): the landing page is full-width, outside the step layout.
+  if (view === 'start') return <Landing dispatch={dispatch} onStart={() => setView(0)} />
+
   return (
     <>
       <BackgroundBlobs />
       <div className="mx-auto flex min-h-screen max-w-4xl flex-col gap-8 px-4 py-6 sm:px-6 sm:py-8">
-        {view !== 'start' && (
-          <header className="flex flex-wrap items-center justify-between gap-3">
-            <h1 className="text-sm font-semibold tracking-tight text-ink">Dental Time Machine</h1>
-            <StepIndicator steps={SCREENS} current={view} onSelect={(i) => setView(i as ScreenIndex)} />
-          </header>
-        )}
+        <header className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-sm font-semibold tracking-tight text-ink">Dental Time Machine</h1>
+          <StepIndicator steps={SCREENS} current={view} onSelect={(i) => setView(i as ScreenIndex)} />
+          {/* Mount point (feature/chat): language, style and voice. */}
+          <PreferencesPicker preferences={state.preferences} dispatch={dispatch} />
+        </header>
 
         <main className="flex-1">
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
-              key={view === 'start' ? 'start' : SCREENS[view].id}
+              key={SCREENS[view].id}
               initial={reduceMotion ? false : { opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={reduceMotion ? { opacity: 1 } : { opacity: 0, y: -10 }}
               transition={{ duration: 0.22, ease: 'easeOut' }}
             >
-              {view === 'start' ? <Start dispatch={dispatch} onStart={() => setView(0)} /> : renderScreen(view)}
+              {renderScreen(view)}
             </motion.div>
           </AnimatePresence>
         </main>
 
-        {view !== 'start' && (
-          <footer className="flex justify-between gap-3">
-            <button type="button" onClick={goBack} className="btn-secondary">
+        <footer className="flex justify-between gap-3">
+          <button type="button" onClick={goBack} className="btn-secondary">
+            <RollLabel>
               <ArrowLeft />
               Back
-            </button>
-            <button type="button" onClick={goNext} disabled={view === LAST} className="btn-primary">
+            </RollLabel>
+          </button>
+          <button type="button" onClick={goNext} disabled={view === LAST} className="btn-primary">
+            <RollLabel>
               Next
               <ArrowRight />
-            </button>
-          </footer>
-        )}
+            </RollLabel>
+          </button>
+        </footer>
       </div>
     </>
   )

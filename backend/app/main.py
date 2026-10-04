@@ -41,6 +41,7 @@ from app.models import (
     Result,
 )
 from app.optimizer import optimize
+from app.routers import chat as chat_router
 from app.routers import filters
 
 logger = logging.getLogger("dental_time_machine")
@@ -139,6 +140,8 @@ app.add_middleware(
     allow_headers=["Content-Type"],
 )
 app.include_router(filters.router)
+
+app.include_router(chat_router.router)
 
 
 # ---------- plain-English validation messages ----------

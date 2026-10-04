@@ -6,6 +6,7 @@ import { formatMoney } from '../format'
 import type { Action, AppState } from '../state'
 import type { Category, Coverage, Plan, Procedure } from '../types'
 import { useLoadMaya } from '../useLoadMaya'
+import RollLabel from '../components/RollLabel'
 
 interface Props {
   state: AppState
@@ -28,8 +29,10 @@ export default function TellUs({ state, dispatch }: Props) {
 
       <div className="flex flex-wrap items-center gap-3">
         <button type="button" onClick={() => void loadMaya()} disabled={loading} className="btn-primary">
-          {loading ? 'Loading Maya…' : 'Load Maya'}
-          <ArrowRight />
+          <RollLabel>
+            {loading ? 'Loading Maya…' : 'Load Maya'}
+            <ArrowRight />
+          </RollLabel>
         </button>
         {state.isDemo && (
           <span className="rounded-full bg-card px-3 py-1 text-xs font-semibold text-primary shadow-sm">

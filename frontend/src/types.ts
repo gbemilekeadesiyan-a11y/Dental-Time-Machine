@@ -89,7 +89,7 @@ export interface Result {
   totals: Totals
   max_left: MaxLeft
   warnings: string[]
-  /** Feature addition. Computed by the engine (not built yet, so absent for now). */
+  /** Feature addition. Computed by the engine on every calculate. */
   cash_comparison?: CashComparison | null
 }
 
@@ -196,6 +196,25 @@ export interface ChatRequest {
   plan: Plan | null
 }
 
+/** Coverage shares the user stated in chat (0 to 1); unknown categories are null. */
+export interface PartialCoverage {
+  preventive: number | null
+  basic: number | null
+  major: number | null
+}
+
+/** Feature addition (feature/chat). Plan fields the user stated in chat; the rest are null. */
+export interface PlanDetails {
+  annual_max: number | null
+  deductible: number | null
+  coverage: PartialCoverage | null
+  /** "MM-DD" */
+  reset_date: string | null
+  used_this_year: number | null
+  deductible_paid_this_year: number | null
+  in_network: boolean | null
+}
+
 export interface ChatResponse {
   /** Checked by the dollar guard. */
   say: string
@@ -204,6 +223,8 @@ export interface ChatResponse {
   /** Needs an explicit "yes" from the user before any procedure is unlocked. */
   proposed_can_wait: string[]
   done_intake: boolean
+  /** Feature addition. Plan details the user stated; needs the user's confirmation before use. */
+  proposed_plan?: PlanDetails | null
 }
 
 export interface SummaryRequest {
