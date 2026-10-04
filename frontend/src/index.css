@@ -1,0 +1,149 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens. Every screen uses only these.
+ * Tailwind 4 keeps its theme here (there is no tailwind.config.js).
+ *
+ * Contrast rules (CLAUDE.md section 10, Apple accessibility guidance):
+ * - Text directly on the page background is ink only (blobs tint the background).
+ * - Small muted text uses muted-text, never muted (#8D8D8E is 3.32:1 on white).
+ * - Green text and the savings pill use savings-deep (#589C7D is 3.25:1 as text).
+ * - No red anywhere.
+ */
+@theme {
+  --color-primary: #3c4aa1;
+  --color-primary-deep: #3542a2;
+  --color-gradient-from: #5468ae; /* darkened from #647cbf so white text is 5.29:1 */
+  --color-gradient-to: #3d4fa7;
+  --color-savings: #589c7d; /* fills and graphics */
+  --color-savings-deep: #3b7459; /* green text and pills: 5.49:1 */
+  --color-bg: #f6f6f6;
+  --color-card: #ffffff;
+  --color-ink: #1b1d24;
+  --color-muted: #8d8d8e; /* control edges and decoration, not text */
+  --color-muted-text: #666668; /* small labels: 5.73:1 on white, about 4.7:1 on glass */
+  --color-track: #dcdfe8; /* neutral ring track */
+
+  --font-sans: "Inter Variable", system-ui, "Segoe UI", Roboto, sans-serif;
+}
+
+body {
+  @apply bg-bg text-ink font-sans antialiased;
+  font-feature-settings: "cv11", "ss01";
+}
+
+/* Frosted card: 70% white, blurred, thin white edge, very soft shadow. */
+@utility glass {
+  background-color: rgb(255 255 255 / 0.7);
+  -webkit-backdrop-filter: blur(24px) saturate(140%);
+  backdrop-filter: blur(24px) saturate(140%);
+  border: 1px solid rgb(255 255 255 / 0.85);
+  box-shadow:
+    0 1px 2px rgb(27 29 36 / 0.04),
+    0 12px 40px rgb(60 74 161 / 0.08);
+
+  @supports not (backdrop-filter: blur(1px)) {
+    background-color: var(--color-card);
+  }
+  @media (prefers-reduced-transparency: reduce) {
+    background-color: var(--color-card);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+/* The primary gradient card, with a soft glossy highlight in the top corner. */
+@utility gradient-card {
+  position: relative;
+  overflow: hidden;
+  color: #fff;
+  background-image: linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to));
+  box-shadow: 0 16px 40px rgb(61 79 167 / 0.28);
+
+  &::before {
+    content: "";
+    position: absolute;
+    top: -40%;
+    right: -20%;
+    width: 70%;
+    height: 90%;
+    border-radius: 9999px;
+    background: radial-gradient(closest-side, rgb(255 255 255 / 0.28), rgb(255 255 255 / 0));
+    pointer-events: none;
+  }
+}
+
+/* Pill buttons. 44 px tall to meet Apple's default control size. */
+@utility btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  padding: 0.625rem 1.25rem;
+  border-radius: 9999px;
+  background-color: var(--color-primary);
+  color: #fff;
+  font-weight: 500;
+  box-shadow: 0 6px 18px rgb(60 74 161 / 0.25);
+  transition: background-color 150ms, box-shadow 150ms;
+
+  &:hover:not(:disabled) {
+    background-color: var(--color-primary-deep);
+    box-shadow: 0 8px 22px rgb(60 74 161 / 0.32);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 3px;
+  }
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+}
+
+@utility btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  padding: 0.625rem 1.25rem;
+  border-radius: 9999px;
+  background-color: rgb(255 255 255 / 0.85);
+  border: 1px solid var(--color-muted);
+  color: var(--color-ink);
+  font-weight: 500;
+  transition: border-color 150ms, color 150ms;
+
+  &:hover:not(:disabled) {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 3px;
+  }
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+}
+
+/* Text inputs: visible edge (muted is 3.32:1 against white, above the 3:1 needed for controls). */
+@utility field {
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.875rem;
+  border-radius: 0.875rem;
+  border: 1px solid var(--color-muted);
+  background-color: rgb(255 255 255 / 0.9);
+  color: var(--color-ink);
+
+  &:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 1px;
+    border-color: var(--color-primary);
+  }
+}
