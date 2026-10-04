@@ -16,6 +16,29 @@ export const CASH_VERDICT: Record<CashComparison['cheaper'], string> = {
 
 export const CASH_UNAVAILABLE = "A cash comparison isn't available for this estimate."
 
+export const TAB_LABELS = {
+  overview: 'Overview',
+  procedures: 'Each procedure',
+  cash: 'Cash or insurance',
+} as const
+export type SummaryTab = keyof typeof TAB_LABELS
+
+// ---------- "use it before it resets" reminder ----------
+
+export const REMINDER_TITLE = 'Before your plan resets'
+export const REMINDER_BUTTON = 'Add a reminder to my calendar'
+export const REMINDER_ALL_USED = "You've likely used this plan year's annual maximum."
+export const REMINDER_CHECK_PLAN = 'Check with your plan whether unused benefits carry over.'
+export const REMINDER_PRIVACY = 'The reminder is saved to your device only. Nothing is sent or stored by us.'
+export const REMINDER_EVENT_TITLE = 'Check your dental benefits before your plan resets'
+export const REMINDER_FILENAME = 'dental-plan-reset-reminder.ics'
+
+export function daysText(days: number): string {
+  if (days === 0) return 'today'
+  if (days === 1) return 'tomorrow'
+  return `in ${days} days`
+}
+
 /**
  * Chart fills. Recharts draws SVG and takes colors as props, so these mirror the
  * index.css tokens: plan pays = savings green, you pay = primary blue.

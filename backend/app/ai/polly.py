@@ -13,6 +13,7 @@ from typing import Any
 import boto3
 
 from app.ai.bedrock import client_config
+from app.ai.plain_text import plain_text
 from app.models import Language
 
 logger = logging.getLogger("dental_time_machine.polly")
@@ -30,7 +31,7 @@ def synthesize(text: str, language: Language) -> bytes | None:
     """MP3 audio of the text in the language's voice, or None if anything goes wrong."""
     try:
         response = _client().synthesize_speech(
-            Text=text, VoiceId=VOICES[language], Engine="neural", OutputFormat="mp3"
+            Text=plain_text(text) or text, VoiceId=VOICES[language], Engine="neural", OutputFormat="mp3"
         )
         audio = response["AudioStream"].read()
     except Exception as exc:  # noqa: BLE001 - every failure means "show the text only"

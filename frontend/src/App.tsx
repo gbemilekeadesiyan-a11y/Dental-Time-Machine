@@ -152,7 +152,8 @@ export default function App() {
               </AnimatePresence>
             </main>
 
-            <footer className="flex justify-between gap-3">
+            {/* Navigation (feature/summary): Back and Next stay on screen, so long steps need no scrolling to move on. */}
+            <footer className="glass sticky bottom-3 z-20 flex justify-between gap-3 rounded-full p-2">
               <button type="button" onClick={goBack} className="btn-secondary">
                 <RollLabel>
                   <ArrowLeft />
