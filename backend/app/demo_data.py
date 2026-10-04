@@ -8,7 +8,7 @@ must come from the team.
 
 from __future__ import annotations
 
-from app.models import CatalogItem, Coverage, Plan, Procedure
+from app.models import CatalogItem, Coverage, Plan, PlanOption, Procedure
 
 # CDT codes for the three procedures we have sourced fees for.
 FILLING_CDT = "D2391"  # Resin-based composite, one surface, posterior
@@ -63,4 +63,40 @@ CATALOG: list[CatalogItem] = [
     CatalogItem(cdt_code=FILLING_CDT, name="Filling", category="basic", default_fee=FILLING_FEE),
     CatalogItem(cdt_code=ROOT_CANAL_CDT, name="Root canal", category="major", default_fee=ROOT_CANAL_FEE),
     CatalogItem(cdt_code=CROWN_CDT, name="Crown", category="major", default_fee=CROWN_FEE),
+]
+
+
+# Employer plan options for "Compare plan options" (Find care). DEMO data, labeled
+# "(demo)" in the UI, pending team approval. Names are generic: never a real insurer.
+# Premiums live only on the options; maya_plan() and its section 9 values are unchanged.
+CURRENT_PLAN_MONTHLY_PREMIUM = 40
+BASIC_PPO_MONTHLY_PREMIUM = 25
+PLUS_PPO_MONTHLY_PREMIUM = 60
+
+PLAN_OPTIONS: list[PlanOption] = [
+    PlanOption(
+        id="current_plan",
+        name="Current plan (demo)",
+        monthly_premium=CURRENT_PLAN_MONTHLY_PREMIUM,
+        plan=maya_plan(),
+        source="demo",
+    ),
+    # Lower premium, smaller annual maximum, higher deductible.
+    PlanOption(
+        id="basic_ppo",
+        name="Basic PPO (demo)",
+        monthly_premium=BASIC_PPO_MONTHLY_PREMIUM,
+        plan=maya_plan().model_copy(update={"annual_max": 1000, "deductible": 100}),
+        source="demo",
+    ),
+    # Higher premium, bigger annual maximum, higher major coverage.
+    PlanOption(
+        id="plus_ppo",
+        name="Plus PPO (demo)",
+        monthly_premium=PLUS_PPO_MONTHLY_PREMIUM,
+        plan=maya_plan().model_copy(
+            update={"annual_max": 2500, "coverage": Coverage(preventive=1.0, basic=0.8, major=0.6)}
+        ),
+        source="demo",
+    ),
 ]

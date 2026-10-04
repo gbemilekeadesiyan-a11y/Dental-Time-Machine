@@ -278,6 +278,42 @@ export interface PlanOption {
 }
 
 /** in_network, languages and accepting_new are demo data. */
+/** Feature addition (compare plan options). The user's care, the options, and optionally their own plan. */
+export interface PlanCompareRequest {
+  /** 1 to 20. */
+  procedures: Procedure[]
+  /** 1 to 5. Leave out to use the employer demo options (GET /plans). */
+  plan_options?: PlanOption[] | null
+  /** The plan from Tell us, added as option "my_plan" (source "user"). */
+  my_plan?: Plan | null
+  /** Accepted for the section 7 contract; doesn't change prices. */
+  filters?: FilterState | null
+}
+
+/** Feature addition. One plan option with the engine's figures for the user's care. Compares, never recommends. */
+export interface PlanComparison {
+  id: string
+  name: string
+  source: 'demo' | 'user'
+  /** Null for the user's own plan. */
+  monthly_premium: number | null
+  plan: Plan
+  all_now_you_pay: number
+  best_you_pay: number
+  moved: string[]
+  max_left: MaxLeft
+  /** Null when the premium isn't known. */
+  annual_premium: number | null
+  /** The same for every option in one response. */
+  plan_years: 1 | 2
+  premiums_in_period: number | null
+  /** best_you_pay + premiums_in_period. Null when the premium isn't known. */
+  year_total: number | null
+  warnings: string[]
+  /** 1 = lowest year_total. Options without a total come last. */
+  sort_order: number
+}
+
 export interface DentistListing {
   /** Ten digits. */
   npi: string

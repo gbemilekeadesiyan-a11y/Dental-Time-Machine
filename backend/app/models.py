@@ -348,3 +348,47 @@ class DentistListing(_Model):
     in_network: bool
     languages: Annotated[list[LanguageName], Field(max_length=MAX_LANGUAGES)]
     accepting_new: bool
+
+
+# ======================================================================
+# Feature addition: compare plan options (POST /filters/apply, Find care).
+# ======================================================================
+
+MAX_PLAN_OPTIONS = 5
+
+
+class PlanCompareRequest(_Model):
+    """The user's care, the plan options to price it under, and optionally their own plan."""
+
+    procedures: ProcedureList
+    # Missing means the employer demo options (GET /plans).
+    plan_options: Annotated[list[PlanOption], Field(min_length=1, max_length=MAX_PLAN_OPTIONS)] | None = None
+    # The plan from Tell us, added as option "my_plan" (source "user").
+    my_plan: Plan | None = None
+    # Accepted for the section 7 contract; it doesn't change prices.
+    filters: FilterState | None = None
+
+
+class PlanComparison(_Model):
+    """One plan option with the engine's figures for the user's care. Compares, never recommends."""
+
+    id: str
+    name: str
+    source: Literal["demo", "user"]
+    # Null for the user's own plan, which has no monthly premium on file.
+    monthly_premium: float | None
+    plan: Plan
+    all_now_you_pay: float
+    best_you_pay: float
+    moved: list[str]
+    max_left: MaxLeft
+    # Null when the premium isn't known (the user's plan without annual_premium).
+    annual_premium: float | None
+    # The same for every option in one response: 2 if any option's best timing uses next plan year.
+    plan_years: Literal[1, 2]
+    premiums_in_period: float | None
+    # best_you_pay + premiums_in_period. Null when the premium isn't known.
+    year_total: float | None
+    warnings: list[str]
+    # 1 = lowest year_total. Options without a total come last.
+    sort_order: int
