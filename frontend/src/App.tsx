@@ -1,5 +1,5 @@
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
-import { useReducer, useState } from 'react'
+import { useEffect, useReducer, useState } from 'react'
 import { ArrowLeft, ArrowRight } from './components/Icons'
 import StepIndicator from './components/StepIndicator'
 import FindCare from './features/filters/FindCare'
@@ -37,6 +37,11 @@ export default function App() {
   const [view, setView] = useState<View>('start')
   const [state, dispatch] = useReducer(reducer, initialState)
   const reduceMotion = useReducedMotion()
+
+  // Navigation (feature/summary): every step opens at its top, not where the last one was scrolled.
+  useEffect(() => {
+    window.scrollTo({ top: 0 })
+  }, [view])
 
   function renderScreen(current: ScreenIndex) {
     switch (current) {
@@ -98,7 +103,8 @@ export default function App() {
           </AnimatePresence>
         </main>
 
-        <footer className="flex justify-between gap-3">
+        {/* Navigation (feature/summary): Back and Next stay on screen, so long steps need no scrolling to move on. */}
+        <footer className="glass sticky bottom-3 z-20 flex justify-between gap-3 rounded-full p-2">
           <button type="button" onClick={goBack} className="btn-secondary">
             <RollLabel>
               <ArrowLeft />
