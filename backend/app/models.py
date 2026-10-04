@@ -255,6 +255,27 @@ class ChatRequest(_Model):
     plan: Plan | None
 
 
+class PartialCoverage(_Model):
+    """Coverage shares the user stated in chat; unknown categories stay None."""
+
+    preventive: Share | None = None
+    basic: Share | None = None
+    major: Share | None = None
+
+
+class PlanDetails(_Model):
+    """Feature addition (feature/chat): plan fields the user stated in chat. Only the
+    fields they said are set; the user applies them to the plan form after checking."""
+
+    annual_max: Money | None = None
+    deductible: Money | None = None
+    coverage: PartialCoverage | None = None
+    reset_date: Annotated[str, Field(pattern=r"^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$")] | None = None
+    used_this_year: Money | None = None
+    deductible_paid_this_year: Money | None = None
+    in_network: bool | None = None
+
+
 class ChatResponse(_Model):
     """say is checked by the dollar guard. Proposals need the user's explicit confirmation."""
 
@@ -262,6 +283,8 @@ class ChatResponse(_Model):
     proposed_procedures: Annotated[list[Procedure], Field(max_length=MAX_PROCEDURES)]
     proposed_can_wait: Annotated[list[Id], Field(max_length=MAX_PROCEDURES)]
     done_intake: bool
+    # Feature addition (feature/chat): plan details the user stated. Needs confirmation too.
+    proposed_plan: PlanDetails | None = Field(default=None, exclude_if=_unset)
 
 
 class SummaryRequest(_Model):
