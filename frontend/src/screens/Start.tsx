@@ -4,6 +4,7 @@ import Notice from '../components/Notice'
 import { START_CTA, START_OWN_CARE, TAGLINE } from '../copy'
 import type { Action } from '../state'
 import { useLoadMaya } from '../useLoadMaya'
+import RollLabel from '../components/RollLabel'
 
 interface Props {
   dispatch: Dispatch<Action>
@@ -27,8 +28,10 @@ export default function Start({ dispatch, onStart }: Props) {
       </h1>
       <div className="flex flex-wrap items-center gap-x-6 gap-y-4">
         <button type="button" onClick={seeMaya} disabled={loading} className="btn-primary px-6 text-base">
-          {loading ? 'Loading Maya…' : START_CTA}
-          <ArrowRight />
+          <RollLabel>
+            {loading ? 'Loading Maya…' : START_CTA}
+            <ArrowRight />
+          </RollLabel>
         </button>
         <button
           type="button"

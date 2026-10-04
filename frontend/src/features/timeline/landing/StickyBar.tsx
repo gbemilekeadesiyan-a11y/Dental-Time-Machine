@@ -2,6 +2,7 @@ import { useMotionValueEvent, useScroll } from 'framer-motion'
 import { useState } from 'react'
 import { ArrowRight } from '../../../components/Icons'
 import { LANDING } from './landingCopy'
+import RollLabel from '../../../components/RollLabel'
 
 /** Distance in px after which the bar turns into glass. */
 const GLASS_AFTER = 24
@@ -28,15 +29,12 @@ export default function StickyBar({ onStart }: { onStart: () => void }) {
       <button
         type="button"
         onClick={onStart}
-        className={
-          'inline-flex min-h-11 items-center gap-2 rounded-full px-5 text-sm font-medium transition-colors duration-200 motion-reduce:transition-none focus-visible:outline-2 focus-visible:outline-offset-2 ' +
-          (glass
-            ? 'bg-primary text-white hover:bg-primary-deep focus-visible:outline-primary'
-            : 'bg-card text-ink hover:bg-card/90 focus-visible:outline-white')
-        }
+        className={'px-5 text-sm ' + (glass ? 'btn-primary' : 'btn-light [--focus-ring:#fff]')}
       >
-        {LANDING.start}
-        <ArrowRight />
+        <RollLabel>
+          {LANDING.start}
+          <ArrowRight />
+        </RollLabel>
       </button>
     </header>
   )
