@@ -39,6 +39,7 @@ from app import sockets
 from app.ai import bedrock, polly
 from app.ai.dollar_guard import allowed_amounts, extract_amounts, guard
 from app.ai.language import detect as detect_language
+from app.ai.plain_text import plain_text
 from app.demo_data import CATALOG, CROWN_CDT, ROOT_CANAL_CDT
 from app.engine import EngineError, calculate
 from app.models import (
@@ -705,7 +706,7 @@ def post_summary(request: SummaryRequest) -> SummaryResponse:
         text = bedrock.call(system, messages, max_tokens=SUMMARY_MAX_TOKENS)
         if text is None:
             return None
-        text = " ".join(text.split())[:MAX_SUMMARY]
+        text = " ".join(plain_text(text).split())[:MAX_SUMMARY]  # No "#" or "**" read aloud.
         return "" if _UNSAFE_WORDING.search(text) or _mislabels_total(text, two_year_totals) else text
 
     def fall_back() -> str:
