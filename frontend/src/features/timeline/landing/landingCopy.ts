@@ -3,7 +3,6 @@
 import { RESET_WORDING } from '../../../glossary'
 
 export const LANDING = {
-  appName: 'Dental Time Machine',
   start: 'Start',
   seeMaya: "See Maya's example",
   loadingMaya: 'Loading Maya…',

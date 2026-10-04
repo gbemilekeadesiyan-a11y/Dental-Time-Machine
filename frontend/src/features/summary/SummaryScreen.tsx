@@ -7,7 +7,9 @@ import type { OptimizeResult, Result } from '../../types'
 import CashVsInsurance from './CashVsInsurance'
 import MaxUsage from './MaxUsage'
 import ProcedureBreakdownChart from './ProcedureBreakdownChart'
-import { SUMMARY_INTRO, SUMMARY_TITLE } from './summaryCopy'
+import AnimatedMoney from '../../components/AnimatedMoney'
+import { SUMMARY_INTRO, SUMMARY_TITLE, TAB_LABELS, type SummaryTab } from './summaryCopy'
+import SummaryTabs from './SummaryTabs'
 import TotalsCard from './TotalsCard'
 
 interface Props {
@@ -32,6 +34,7 @@ interface Answer {
 export default function SummaryScreen({ state, onEditCare }: Props) {
   const { procedures, plan, schedule } = state
   const [answer, setAnswer] = useState<Answer | null>(null)
+  const [tab, setTab] = useState<SummaryTab>('overview')
 
   useEffect(() => {
     if (procedures.length === 0) return
@@ -52,6 +55,7 @@ export default function SummaryScreen({ state, onEditCare }: Props) {
     answer?.inputs.procedures === procedures && answer.inputs.plan === plan && answer.inputs.schedule === schedule
 
   let body: ReactNode
+  let intro: ReactNode = SUMMARY_INTRO
   if (procedures.length === 0) {
     body = (
       <Notice>
@@ -74,13 +78,42 @@ export default function SummaryScreen({ state, onEditCare }: Props) {
     )
   } else {
     const { chosen, best } = answer.outcome
+    // The short version: the one line to read if you read nothing else. Stays above every tab.
+    intro = (
+      <span aria-live="polite">
+        You&apos;ll likely pay <AnimatedMoney value={chosen.totals.you_pay} className="font-semibold text-ink" /> with the
+        timing you chose. Your plan likely pays{' '}
+        <AnimatedMoney value={chosen.totals.plan_pays} className="font-semibold text-savings-deep" />.
+      </span>
+    )
     body = (
-      <div className="space-y-6" aria-live="polite">
-        <TotalsCard result={chosen} optimized={best} procedures={procedures} />
-        <MaxUsage result={chosen} plan={plan} />
-        <ProcedureBreakdownChart result={chosen} procedures={procedures} />
-        <CashVsInsurance comparison={chosen.cash_comparison ?? null} />
-      </div>
+      <SummaryTabs
+        label="Summary sections"
+        current={tab}
+        onChange={setTab}
+        tabs={[
+          {
+            id: 'overview',
+            label: TAB_LABELS.overview,
+            panel: (
+              <div className="space-y-6">
+                <TotalsCard result={chosen} optimized={best} procedures={procedures} />
+                <MaxUsage result={chosen} plan={plan} />
+              </div>
+            ),
+          },
+          {
+            id: 'procedures',
+            label: TAB_LABELS.procedures,
+            panel: <ProcedureBreakdownChart result={chosen} procedures={procedures} />,
+          },
+          {
+            id: 'cash',
+            label: TAB_LABELS.cash,
+            panel: <CashVsInsurance comparison={chosen.cash_comparison ?? null} />,
+          },
+        ]}
+      />
     )
   }
 
@@ -90,7 +123,7 @@ export default function SummaryScreen({ state, onEditCare }: Props) {
         <h2 id="summary-title" className="text-4xl font-light tracking-tight text-ink sm:text-5xl">
           {SUMMARY_TITLE}
         </h2>
-        <p className="text-ink/80">{SUMMARY_INTRO}</p>
+        <p className="text-lg text-ink/80">{intro}</p>
       </div>
       {body}
       <Disclaimer />

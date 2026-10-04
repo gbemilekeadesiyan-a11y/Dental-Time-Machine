@@ -14,7 +14,6 @@ Bedrock is always faked: no AWS calls.
 
 from __future__ import annotations
 
-import json
 from typing import Any
 
 import pytest
@@ -32,27 +31,29 @@ def client() -> TestClient:
 
 
 class FakeBedrock:
-    def __init__(self, *replies: str | None) -> None:
+    """Stands in for bedrock.call_with_tool: returns queued replies and records each call."""
+
+    def __init__(self, *replies: bedrock.ToolReply | None) -> None:
         self.replies = list(replies)
         self.calls: list[dict[str, Any]] = []
 
-    def __call__(self, system: str, messages: list[dict[str, Any]], **kwargs: Any) -> str | None:
+    def __call__(self, system: str, messages: list[dict[str, Any]], tool: Any, **kwargs: Any) -> bedrock.ToolReply | None:
         self.calls.append({"system": system, "messages": messages})
         return self.replies.pop(0) if self.replies else None
 
 
 @pytest.fixture
 def llm(monkeypatch: pytest.MonkeyPatch):
-    def install(*replies: str | None) -> FakeBedrock:
+    def install(*replies: bedrock.ToolReply | None) -> FakeBedrock:
         fake = FakeBedrock(*replies)
-        monkeypatch.setattr(bedrock, "call", fake)
+        monkeypatch.setattr(bedrock, "call_with_tool", fake)
         return fake
 
     return install
 
 
-def reply(say: str) -> str:
-    return json.dumps({"say": say, "procedures": [], "can_wait_ids": [], "done_intake": False})
+def reply(say: str) -> bedrock.ToolReply:
+    return bedrock.ToolReply(text=say)
 
 
 def northgate_document() -> dict[str, Any]:
@@ -140,9 +141,8 @@ def test_invalid_document_is_a_plain_422(client):
     assert isinstance(response.json()["detail"], str)
 
 
-def test_earlier_assistant_replies_are_sent_back_in_the_json_format(client, llm):
-    """The model copies the format of its own earlier turns: plain-text history made it
-    answer follow-ups in plain text, which the parser rightly rejects (real Bedrock, 5 of 5)."""
+def test_follow_ups_send_the_whole_conversation(client, llm):
+    """A follow-up like "talk more about it" needs the earlier turns, sent back as they were said."""
     fake = llm(reply("Your document says your annual maximum is $2,000."))
     payload = body("What's my annual maximum?", northgate_document())
     payload["turns"] = [
@@ -151,6 +151,7 @@ def test_earlier_assistant_replies_are_sent_back_in_the_json_format(client, llm)
         {"role": "user", "text": "What's my annual maximum?"},
     ]
     response = client.post("/chat", json=payload)
-    assistant = [m for m in fake.calls[0]["messages"] if m["role"] == "assistant"]
-    assert json.loads(assistant[0]["content"][0]["text"]) == {"say": "A waiting period is time before some care is covered."}
+    roles = [m["role"] for m in fake.calls[0]["messages"]]
+    assert roles == ["user", "assistant", "user"]
+    assert fake.calls[0]["messages"][1]["content"][0]["text"] == "A waiting period is time before some care is covered."
     assert response.json()["say"] == "Your document says your annual maximum is $2,000."

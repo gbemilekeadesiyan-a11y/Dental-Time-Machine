@@ -90,7 +90,7 @@ export default function ChatIntake({ state, dispatch }: Props) {
         if (reply.proposed_procedures.length > 0) setProposals(reply.proposed_procedures)
         if (reply.proposed_plan) setPlanDetails(reply.proposed_plan)
         setCanWaitIds(reply.proposed_can_wait)
-        if (preferences.voice_on) void speaker.play(reply.say, preferences.language)
+        if (preferences.voice_on) void speaker.play(reply.say, reply.language ?? preferences.language)
       } catch (e) {
         if (isAbortError(e)) return
         setError(e instanceof ApiError ? e.message : 'Something went wrong. Please try again.')

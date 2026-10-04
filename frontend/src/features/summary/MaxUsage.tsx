@@ -4,6 +4,7 @@ import JargonChip from '../../components/JargonChip'
 import { formatMoney } from '../../format'
 import { RESET_WORDING } from '../../glossary'
 import type { Plan, Result } from '../../types'
+import ResetReminder from './ResetReminder'
 
 interface Props {
   result: Result
@@ -35,6 +36,7 @@ export default function MaxUsage({ result, plan }: Props) {
         )}
       </div>
       {usesNextYear && <p className="text-sm text-muted-text">{RESET_WORDING}</p>}
+      <ResetReminder resetDate={plan.reset_date} leftThisYear={result.max_left.this_year} />
     </article>
   )
 }
