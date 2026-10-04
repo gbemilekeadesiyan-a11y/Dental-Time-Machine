@@ -88,7 +88,14 @@ export default function ChatIntake({ state, dispatch }: Props) {
       latest.current = controller
       try {
         const reply = await chat(
-          { turns: next, preferences, procedures: state.procedures, plan: completePlan(state.plan) },
+          {
+            turns: next,
+            preferences,
+            procedures: state.procedures,
+            plan: completePlan(state.plan),
+            // What the user's uploaded document says (feature/documents), so the chat can talk about it.
+            document: state.document,
+          },
           { signal: controller.signal },
         )
         setTurns((t) => [...t, { role: 'assistant' as const, text: reply.say }].slice(-MAX_TURNS))
@@ -104,8 +111,23 @@ export default function ChatIntake({ state, dispatch }: Props) {
         setBusy(false)
       }
     },
-    [busy, turns, preferences, state.procedures, state.plan, speaker],
+    [busy, turns, preferences, state.procedures, state.plan, state.document, speaker],
   )
+
+  // A question sent from elsewhere, e.g. "Ask the assistant" on a document term card:
+  // bring the chat into view and send it once.
+  const sectionRef = useRef<HTMLElement>(null)
+  const { chatAsk } = state
+  useEffect(() => {
+    if (!chatAsk || busy) return
+    // Run after this render (not inside the effect) so sending doesn't cascade renders.
+    const timer = window.setTimeout(() => {
+      dispatch({ type: 'chat_ask_handled', id: chatAsk.id })
+      sectionRef.current?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' })
+      void send(chatAsk.text)
+    }, 0)
+    return () => window.clearTimeout(timer)
+  }, [chatAsk, busy, dispatch, send, reduceMotion])
 
   const mic = useSpeechInput(preferences.language, (transcript) => void send(transcript))
 
@@ -113,7 +135,8 @@ export default function ChatIntake({ state, dispatch }: Props) {
   const waitable = canWaitIds.filter((id) => state.procedures.some((p) => p.id === id && !p.can_wait))
 
   return (
-    <section aria-labelledby={titleId} className="glass space-y-4 rounded-3xl p-5 sm:p-6">
+    // scroll-mt-24 keeps the card's top clear of the header pill when "Ask the assistant" scrolls here.
+    <section ref={sectionRef} aria-labelledby={titleId} className="glass scroll-mt-24 space-y-4 rounded-3xl p-5 sm:p-6">
       <div className="space-y-2">
         {/* Title on the left, language and style on the right; the picker wraps under it below 810 px. */}
         <div className="flex flex-wrap items-start justify-between gap-3 tablet:flex-nowrap">

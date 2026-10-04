@@ -194,6 +194,8 @@ export interface ChatRequest {
   /** At most 20. */
   procedures: Procedure[]
   plan: Plan | null
+  /** Feature addition (feature/documents). What the reader found in an uploaded document; not yet confirmed. */
+  document?: DocumentReadResult | null
 }
 
 /** Coverage shares the user stated in chat (0 to 1); unknown categories are null. */

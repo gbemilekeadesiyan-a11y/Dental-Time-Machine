@@ -131,7 +131,8 @@ function Comparison({ rows, procedures, showDetails, detailsId, onToggleDetails 
         </button>
       </div>
 
-      <ol id={detailsId} className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      {/* One per row: this sits in a half-width column on Find care, too narrow for side-by-side cards. */}
+      <ol id={detailsId} className="grid gap-4">
         {sorted.map((row) => (
           <li key={row.id}>
             <OptionCard row={row} labels={labels} shared={shared} showDetails={showDetails} />

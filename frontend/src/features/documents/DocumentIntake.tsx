@@ -21,8 +21,10 @@ interface Props {
    * saying what was applied, shown under the upload area.
    */
   onConfirm: (plan: Plan | null, procedures: Procedure[]) => string
-  /** Opens the chat about a term (when the chat feature lands). */
-  onAsk?: (term: string) => void
+  /** Called as soon as a document is read (before confirming), so the chat can talk about it. */
+  onRead?: (result: DocumentReadResult) => void
+  /** Opens the chat about a term, or about the whole document when term is null. */
+  onAsk?: (term: string | null) => void
 }
 
 /**
@@ -31,7 +33,7 @@ interface Props {
  * cards, only when there are terms) -> confirm form. Nothing is applied until
  * the user confirms.
  */
-export default function DocumentIntake({ onConfirm, onAsk }: Props) {
+export default function DocumentIntake({ onConfirm, onRead, onAsk }: Props) {
   const [step, setStep] = useState<Step>('upload')
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [result, setResult] = useState<DocumentReadResult | null>(null)
@@ -62,6 +64,7 @@ export default function DocumentIntake({ onConfirm, onAsk }: Props) {
       const cards = revealTerms(read)
       setResult(read)
       setTerms(cards)
+      onRead?.(read)
       setStep(cards.length > 0 ? 'revealed' : 'confirm')
     } catch (e) {
       setError(e instanceof ApiError ? e.message : UNEXPECTED)

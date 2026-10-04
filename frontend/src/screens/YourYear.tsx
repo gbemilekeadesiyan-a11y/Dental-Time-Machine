@@ -6,6 +6,7 @@ import JargonChip from '../components/JargonChip'
 import MaxRing from '../components/MaxRing'
 import Notice from '../components/Notice'
 import StepShell from '../components/StepShell'
+import ResetReminder from '../features/summary/ResetReminder'
 import type { AppState } from '../state'
 import type { Result } from '../types'
 
@@ -71,29 +72,33 @@ export default function YourYear({ state, onEditCare }: Props) {
           </button>
         </Notice>
       ) : (
-        <div className="glass grid items-center gap-8 rounded-3xl p-6 sm:grid-cols-[auto_1fr] sm:p-8">
-          <MaxRing left={answer.outcome.result.max_left.this_year} annualMax={plan.annual_max} />
-          <div className="space-y-4">
-            <dl className="space-y-4" aria-live="polite">
-              <div>
-                <dt className="text-sm text-muted-text">You&apos;ll likely pay</dt>
-                <dd>
-                  <AnimatedMoney value={answer.outcome.result.totals.you_pay} className="text-5xl font-light tracking-tight text-ink" />
-                </dd>
+        <>
+          <div className="glass grid items-center gap-8 rounded-3xl p-6 sm:grid-cols-[auto_1fr] sm:p-8">
+            <MaxRing left={answer.outcome.result.max_left.this_year} annualMax={plan.annual_max} />
+            <div className="space-y-4">
+              <dl className="space-y-4" aria-live="polite">
+                <div>
+                  <dt className="text-sm text-muted-text">You&apos;ll likely pay</dt>
+                  <dd>
+                    <AnimatedMoney value={answer.outcome.result.totals.you_pay} className="text-5xl font-light tracking-tight text-ink" />
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-sm text-muted-text">Your plan likely pays</dt>
+                  <dd>
+                    <AnimatedMoney value={answer.outcome.result.totals.plan_pays} className="text-2xl font-medium tracking-tight text-savings-deep" />
+                  </dd>
+                </div>
+              </dl>
+              <div className="flex flex-wrap items-start gap-2" aria-label="Terms used above">
+                <JargonChip term="annual maximum" />
+                <JargonChip term="plan year" />
               </div>
-              <div>
-                <dt className="text-sm text-muted-text">Your plan likely pays</dt>
-                <dd>
-                  <AnimatedMoney value={answer.outcome.result.totals.plan_pays} className="text-2xl font-medium tracking-tight text-savings-deep" />
-                </dd>
-              </div>
-            </dl>
-            <div className="flex flex-wrap items-start gap-2" aria-label="Terms used above">
-              <JargonChip term="annual maximum" />
-              <JargonChip term="plan year" />
             </div>
           </div>
-        </div>
+          {/* The bonus reminder (feature/summary), repeated on the last step so the flow ends on it. */}
+          <ResetReminder resetDate={plan.reset_date} leftThisYear={answer.outcome.result.max_left.this_year} />
+        </>
       )}
     </StepShell>
   )

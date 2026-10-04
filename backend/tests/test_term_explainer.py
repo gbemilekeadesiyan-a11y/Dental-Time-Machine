@@ -13,6 +13,7 @@ from fastapi.testclient import TestClient
 
 from app import sockets
 from app.main import app
+from app.ai import bedrock
 from app.routers import term_explainer
 from app.routers.term_explainer import explain_term
 
@@ -119,7 +120,7 @@ class FakeClient:
 def real_ask(monkeypatch, client):
     """Undo conftest's stub for _ask_bedrock and point it at a fake boto3 client."""
     monkeypatch.setattr(term_explainer, "_ask_bedrock", term_explainer._ask_bedrock_impl)
-    monkeypatch.setattr(term_explainer, "_client", lambda: client)
+    monkeypatch.setattr(bedrock, "_client", lambda: client)
 
 
 def test_prompt_sets_the_rules_and_treats_the_term_as_data(monkeypatch):

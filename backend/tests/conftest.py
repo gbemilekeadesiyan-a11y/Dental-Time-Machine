@@ -9,7 +9,8 @@ from __future__ import annotations
 
 import pytest
 
-from app.routers import document_reader, term_explainer
+from app.ai import bedrock
+from app.routers import term_explainer
 
 
 @pytest.fixture(autouse=True)
@@ -17,5 +18,5 @@ def _no_aws(monkeypatch):
     def no_client():
         raise RuntimeError("Tests must not call AWS")
 
-    monkeypatch.setattr(document_reader, "_client", no_client)
+    monkeypatch.setattr(bedrock, "_client", no_client)
     monkeypatch.setattr(term_explainer, "_ask_bedrock", lambda term, language, style: None)
