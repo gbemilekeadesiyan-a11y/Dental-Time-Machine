@@ -18,6 +18,7 @@ from __future__ import annotations
 import logging
 import os
 from collections.abc import Iterable
+from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Literal
@@ -77,6 +78,21 @@ def text_messages(turns: Iterable[tuple[Role, str]]) -> list[dict[str, Any]]:
     return messages
 
 
+def _converse(**kwargs: Any) -> list[dict[str, Any]] | None:
+    """The assistant message's content blocks, or None on any failure."""
+    try:
+        response = _client().converse(modelId=MODEL_ID, **kwargs)
+        return list(response.get("output", {}).get("message", {}).get("content", []))
+    except Exception as exc:  # noqa: BLE001 - every failure means "use the fallback"
+        # Type only: AWS messages can echo request details.
+        logger.warning("Bedrock call failed: %s", type(exc).__name__)
+        return None
+
+
+def _text(content: list[dict[str, Any]]) -> str:
+    return "".join(block.get("text", "") for block in content).strip()
+
+
 def call(
     system: str,
     messages: list[dict[str, Any]],
@@ -88,17 +104,53 @@ def call(
     messages use the Converse format, so documents can send image blocks too;
     text_messages() builds it from plain chat turns.
     """
-    try:
-        response = _client().converse(
-            modelId=MODEL_ID,
-            system=[{"text": system}],
-            messages=messages,
-            inferenceConfig={"maxTokens": max_tokens, "temperature": temperature},
-        )
-        content = response.get("output", {}).get("message", {}).get("content", [])
-        text = "".join(block.get("text", "") for block in content).strip()
-    except Exception as exc:  # noqa: BLE001 - every failure means "use the fallback"
-        # Type only: AWS messages can echo request details.
-        logger.warning("Bedrock call failed: %s", type(exc).__name__)
+    content = _converse(
+        system=[{"text": system}],
+        messages=messages,
+        inferenceConfig={"maxTokens": max_tokens, "temperature": temperature},
+    )
+    return (_text(content) or None) if content is not None else None
+
+
+@dataclass(frozen=True)
+class ToolReply:
+    """What the model wrote and what it passed to the tool (None if it didn't call it).
+    content is the raw assistant message, needed to send a tool result back."""
+
+    text: str
+    tool_input: dict[str, Any] | None = None
+    tool_use_id: str | None = None
+    content: list[dict[str, Any]] = field(default_factory=list)
+
+
+def tool_spec(name: str, description: str, schema: dict[str, Any]) -> dict[str, Any]:
+    """A tool in Bedrock's Converse format."""
+    return {"toolSpec": {"name": name, "description": description, "inputSchema": {"json": schema}}}
+
+
+def call_with_tool(
+    system: str,
+    messages: list[dict[str, Any]],
+    tool: dict[str, Any],
+    max_tokens: int = DEFAULT_MAX_TOKENS,
+    temperature: float = 0.3,
+) -> ToolReply | None:
+    """Ask the model with one optional tool. It writes its reply as normal text and calls
+    the tool for structured data. None if anything goes wrong or the reply is empty."""
+    content = _converse(
+        system=[{"text": system}],
+        messages=messages,
+        inferenceConfig={"maxTokens": max_tokens, "temperature": temperature},
+        toolConfig={"tools": [tool], "toolChoice": {"auto": {}}},
+    )
+    if content is None:
         return None
-    return text or None
+    name = tool["toolSpec"]["name"]
+    use = next((b["toolUse"] for b in content if b.get("toolUse", {}).get("name") == name), None)
+    reply = ToolReply(
+        text=_text(content),
+        tool_input=use.get("input") if use and isinstance(use.get("input"), dict) else None,
+        tool_use_id=use.get("toolUseId") if use else None,
+        content=content,
+    )
+    return reply if reply.text or reply.tool_use_id else None

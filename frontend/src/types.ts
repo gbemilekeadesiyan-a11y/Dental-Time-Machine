@@ -225,6 +225,8 @@ export interface ChatResponse {
   done_intake: boolean
   /** Feature addition. Plan details the user stated; needs the user's confirmation before use. */
   proposed_plan?: PlanDetails | null
+  /** Feature addition. Set only when the reply is in another language than the setting, because the user wrote in it. */
+  language?: Language | null
 }
 
 export interface SummaryRequest {
