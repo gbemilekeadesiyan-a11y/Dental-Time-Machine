@@ -149,6 +149,8 @@ app.add_middleware(
     allow_origins=FRONTEND_ORIGINS,
     allow_methods=["GET", "POST"],
     allow_headers=["Content-Type"],
+    # /speak says which voice spoke (elevenlabs or polly), for debugging in the browser.
+    expose_headers=["X-Voice"],
 )
 app.include_router(filters.router)
 app.include_router(plans_router.router)  # Compare plan options (feature/plan-compare)
