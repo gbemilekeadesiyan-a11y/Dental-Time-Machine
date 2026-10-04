@@ -41,6 +41,7 @@ from app.models import (
     Result,
 )
 from app.optimizer import optimize
+from app.routers import documents
 
 logger = logging.getLogger("dental_time_machine")
 
@@ -49,6 +50,11 @@ FRONTEND_ORIGINS = ["http://localhost:5173"]
 # The largest legitimate request is about 30 KB (20 procedures at their field limits).
 MAX_BODY_BYTES = 64 * 1024
 TOO_LARGE_MESSAGE = "The request is too large. Try fewer procedures or shorter text."
+# File uploads get their own limit: the 5 MB file plus room for the multipart wrapper.
+# Every other route keeps MAX_BODY_BYTES. The route still enforces the exact 5 MB itself.
+UPLOAD_LIMITS: dict[str, tuple[int, str]] = {
+    "/read-document": (documents.MAX_DOCUMENT_BYTES + MAX_BODY_BYTES, documents.TOO_LARGE_MESSAGE),
+}
 UNEXPECTED_MESSAGE = "Something went wrong on our side. Please try again."
 
 
@@ -88,8 +94,9 @@ class ContainUnexpectedErrors:
 
 
 class LimitBodySize:
-    """Reject request bodies over MAX_BODY_BYTES with a plain 422.
+    """Reject request bodies over the limit with a plain 422.
 
+    The limit is MAX_BODY_BYTES, except for the upload routes in UPLOAD_LIMITS.
     Checks the declared Content-Length first, then counts bytes as they arrive,
     so a request that doesn't declare its size can't slip past.
     """
@@ -103,9 +110,11 @@ class LimitBodySize:
             await self.app(scope, receive, send)
             return
 
+        max_bytes, message_text = UPLOAD_LIMITS.get(scope.get("path", ""), (self.max_bytes, TOO_LARGE_MESSAGE))
+
         declared = dict(scope.get("headers", [])).get(b"content-length")
-        if declared is not None and (not declared.isdigit() or int(declared) > self.max_bytes):
-            await JSONResponse(status_code=422, content={"detail": TOO_LARGE_MESSAGE})(scope, receive, send)
+        if declared is not None and (not declared.isdigit() or int(declared) > max_bytes):
+            await JSONResponse(status_code=422, content={"detail": message_text})(scope, receive, send)
             return
 
         received = 0
@@ -115,9 +124,9 @@ class LimitBodySize:
             message = await receive()
             if message["type"] == "http.request":
                 received += len(message.get("body", b""))
-                if received > self.max_bytes:
+                if received > max_bytes:
                     # FastAPI re-raises HTTPExceptions from the body read unchanged.
-                    raise HTTPException(status_code=422, detail=TOO_LARGE_MESSAGE)
+                    raise HTTPException(status_code=422, detail=message_text)
             return message
 
         await self.app(scope, counting_receive, send)
@@ -329,3 +338,6 @@ def post_parse(body: ParseRequest) -> list[Procedure]:
 def post_explain(body: ExplainRequest) -> ExplainResponse:
     """FAKE in the MVP: returns fixed glossary text."""
     return ExplainResponse(text=sockets.explain(body.term, body.language, body.style))
+
+
+app.include_router(documents.router)

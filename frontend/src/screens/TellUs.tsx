@@ -2,6 +2,7 @@ import { useId, type Dispatch } from 'react'
 import { ArrowRight } from '../components/Icons'
 import Notice from '../components/Notice'
 import { CAN_WAIT_HELP, CAN_WAIT_LABEL, CATEGORY_LABELS, DEMO_PLAN_LABEL } from '../copy'
+import DocumentIntake from '../features/documents/DocumentIntake'
 import { formatMoney } from '../format'
 import type { Action, AppState } from '../state'
 import type { Category, Coverage, Plan, Procedure } from '../types'
@@ -39,10 +40,28 @@ export default function TellUs({ state, dispatch }: Props) {
       </div>
       {error && <Notice tone="problem">{error}</Notice>}
 
+      <DocumentIntake onConfirm={(plan, procedures) => applyDocument(dispatch, plan, procedures)} />
+
       <ProcedureList procedures={state.procedures} dispatch={dispatch} />
       <PlanForm plan={state.plan} onChange={(plan) => dispatch({ type: 'update_plan', plan })} />
     </section>
   )
+}
+
+// ---------- document mount (feature/documents) ----------
+
+/**
+ * Applies a confirmed document read. Plans use update_plan. Procedures wait on
+ * a core-team state action (requested from Samuel), so for now we say so.
+ */
+function applyDocument(dispatch: Dispatch<Action>, plan: Plan | null, procedures: Procedure[]): string {
+  if (plan) dispatch({ type: 'update_plan', plan })
+  if (procedures.length > 0) {
+    return plan
+      ? 'Your plan details were added below. Procedures from documents are coming soon, so please add them yourself for now.'
+      : 'Procedures from documents are coming soon. Please add them yourself for now.'
+  }
+  return 'Your plan details were added below.'
 }
 
 // ---------- procedures ----------

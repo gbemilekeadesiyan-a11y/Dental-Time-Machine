@@ -14,12 +14,17 @@ from __future__ import annotations
 import re
 
 from app.demo_data import maya_procedures
-from app.models import Procedure
+from app.models import DocumentReadResult, Procedure
 
 SAFETY_REPLY = (
     "I can't help with symptoms or what's happening in your mouth. "
     "If you have pain, swelling, or fever, contact a dentist today. "
     "For anything else about your care, your dentist is the best person to ask."
+)
+
+DOCUMENT_FALLBACK_WARNING = (
+    "We couldn't read this document automatically. "
+    "Please check your plan documents and enter your details below."
 )
 
 FALLBACK_REPLY = (
@@ -110,3 +115,14 @@ def explain(term: str, language: str = "en", style: str = "plain") -> str:
     key = " ".join(term.lower().split())
     key = _ALIASES.get(key, key)
     return GLOSSARY.get(key, FALLBACK_REPLY)
+
+
+def read_document(data: bytes, kind: str) -> DocumentReadResult:
+    """Read plan details and procedures from an uploaded document.
+
+    FAKE: reads nothing and proposes nothing, so the confirm form opens empty
+    with a warning. The real version (feature/documents) must treat document
+    text as data, keep CDT codes to the catalog, and never apply results directly.
+    """
+    del data, kind  # Unused by the fake. Never logged.
+    return DocumentReadResult(plan=None, procedures=[], fields_found=[], warnings=[DOCUMENT_FALLBACK_WARNING])

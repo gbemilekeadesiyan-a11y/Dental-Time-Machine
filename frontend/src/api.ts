@@ -7,6 +7,7 @@ import type {
   CalculateRequest,
   CatalogItem,
   DemoResponse,
+  DocumentReadResult,
   ErrorResponse,
   ExplainRequest,
   ExplainResponse,
@@ -120,4 +121,24 @@ export function explain(
   options?: RequestOptions,
 ): Promise<ExplainResponse> {
   return post<ExplainResponse>('/explain', { term, language, style } satisfies ExplainRequest, options)
+}
+
+// ---------- documents (Chuks, feature/documents) ----------
+
+const DOCUMENT_NAMES: Record<string, string> = {
+  'application/pdf': 'document.pdf',
+  'image/jpeg': 'document.jpg',
+  'image/png': 'document.png',
+}
+
+/**
+ * POST /read-document: read plan details and procedures from a pdf, jpg or png.
+ * The result always goes to the confirm form, never straight into the estimate.
+ * Sends a neutral file name so the user's own file name never leaves the browser.
+ */
+export function readDocument(file: File, options?: RequestOptions): Promise<DocumentReadResult> {
+  const form = new FormData()
+  form.append('file', file, DOCUMENT_NAMES[file.type] ?? 'document')
+  // No Content-Type header: the browser sets the multipart boundary itself.
+  return request<DocumentReadResult>('/read-document', { method: 'POST', body: form }, options)
 }
