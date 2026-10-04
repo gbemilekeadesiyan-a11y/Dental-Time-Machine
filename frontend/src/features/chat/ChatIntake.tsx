@@ -1,15 +1,18 @@
+import { useReducedMotion } from 'framer-motion'
 import { useCallback, useEffect, useId, useRef, useState, type Dispatch } from 'react'
+import { PLAN_FORM_ID } from '../../anchors'
 import { ApiError, chat, isAbortError } from '../../api'
 import { ArrowRight } from '../../components/Icons'
 import Notice from '../../components/Notice'
 import { procedureLabels } from '../../format'
 import type { Action, AppState } from '../../state'
-import type { ChatTurn, PlanDetails, Procedure } from '../../types'
+import type { ChatTurn, Language, PlanDetails, Procedure } from '../../types'
 import { setFilter } from '../filters/filterStore'
-import { CHAT_COPY } from './chatCopy'
+import { CHAT_COPY, LANGUAGE_NAMES } from './chatCopy'
 import { completePlan } from './chatUtils'
 import ConfirmPlan from './ConfirmPlan'
 import ConfirmProposals from './ConfirmProposals'
+import PreferencesPicker from './PreferencesPicker'
 import { useSpeaker, useSpeechInput } from './speech'
 
 interface Props {
@@ -39,6 +42,11 @@ export default function ChatIntake({ state, dispatch }: Props) {
   const [canWaitIds, setCanWaitIds] = useState<string[]>([])
   const [planDetails, setPlanDetails] = useState<PlanDetails | null>(null)
   const [zip, setZip] = useState<string | null>(null)
+  // After Apply on the plan card: a short confirmation until the next message.
+  const [planAdded, setPlanAdded] = useState(false)
+  // Set when the user changes the language here; announced politely.
+  const [switchedTo, setSwitchedTo] = useState<Language | null>(null)
+  const reduceMotion = useReducedMotion()
   const speaker = useSpeaker()
   const titleId = useId()
   const inputId = useId()
@@ -72,6 +80,8 @@ export default function ChatIntake({ state, dispatch }: Props) {
       setTurns(next)
       setDraft('')
       setError(null)
+      setPlanAdded(false)
+      setSwitchedTo(null)
       setBusy(true)
       latest.current?.abort()
       const controller = new AbortController()
@@ -113,11 +123,11 @@ export default function ChatIntake({ state, dispatch }: Props) {
     // Run after this render (not inside the effect) so sending doesn't cascade renders.
     const timer = window.setTimeout(() => {
       dispatch({ type: 'chat_ask_handled', id: chatAsk.id })
-      sectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      sectionRef.current?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' })
       void send(chatAsk.text)
     }, 0)
     return () => window.clearTimeout(timer)
-  }, [chatAsk, busy, dispatch, send])
+  }, [chatAsk, busy, dispatch, send, reduceMotion])
 
   const mic = useSpeechInput(preferences.language, (transcript) => void send(transcript))
 
@@ -125,12 +135,28 @@ export default function ChatIntake({ state, dispatch }: Props) {
   const waitable = canWaitIds.filter((id) => state.procedures.some((p) => p.id === id && !p.can_wait))
 
   return (
-    <section ref={sectionRef} aria-labelledby={titleId} className="glass scroll-mt-6 space-y-4 rounded-3xl p-5 sm:p-6">
-      <div className="space-y-1">
-        <h3 id={titleId} className="text-xl font-semibold tracking-tight text-ink">
-          {copy.intakeTitle}
-        </h3>
-        <p className="text-sm text-muted-text">{copy.intakeIntro}</p>
+    // scroll-mt-24 keeps the card's top clear of the header pill when "Ask the assistant" scrolls here.
+    <section ref={sectionRef} aria-labelledby={titleId} className="glass scroll-mt-24 space-y-4 rounded-3xl p-5 sm:p-6">
+      <div className="space-y-2">
+        {/* Title on the left, language and style on the right; the picker wraps under it below 810 px. */}
+        <div className="flex flex-wrap items-start justify-between gap-3 tablet:flex-nowrap">
+          <div className="min-w-0 space-y-1">
+            <h3 id={titleId} className="text-xl font-semibold tracking-tight text-ink">
+              {copy.intakeTitle}
+            </h3>
+            <p className="text-sm text-muted-text">{copy.intakeIntro}</p>
+          </div>
+          <PreferencesPicker
+            variant="compact"
+            preferences={preferences}
+            dispatch={dispatch}
+            onLanguageChange={setSwitchedTo}
+          />
+        </div>
+        {/* Always rendered (empty until a change), so screen readers announce it. The conversation stays. */}
+        <p className="text-sm text-muted-text" role="status">
+          {switchedTo && copy.nowReplying(LANGUAGE_NAMES[switchedTo])}
+        </p>
       </div>
 
       <ol className="max-h-80 space-y-3 overflow-y-auto" aria-live="polite">
@@ -200,9 +226,22 @@ export default function ChatIntake({ state, dispatch }: Props) {
           onApply={(plan) => {
             dispatch({ type: 'update_plan', plan })
             setPlanDetails(null)
+            setPlanAdded(true)
+            // Show the filled-in form, where every value can still be edited.
+            requestAnimationFrame(() =>
+              document
+                .getElementById(PLAN_FORM_ID)
+                ?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' }),
+            )
           }}
           onDismiss={() => setPlanDetails(null)}
         />
+      )}
+
+      {planAdded && (
+        <p className="text-sm font-medium text-ink" role="status">
+          {copy.planAdded}
+        </p>
       )}
 
       {zip && (
@@ -231,14 +270,20 @@ export default function ChatIntake({ state, dispatch }: Props) {
       {mic.problem && <Notice>{copy.micProblems[mic.problem]}</Notice>}
       {speaker.failed && <Notice>{copy.voiceProblem}</Notice>}
       {mic.listening && (
-        <p className="text-sm text-ink" role="status">
-          {copy.listening} {mic.interim && <span className="text-muted-text">“{mic.interim}”</span>}
-        </p>
+        <div className="space-y-1">
+          {mic.interim && <p className="text-sm text-ink">“{mic.interim}”</p>}
+          {/* Announced once when listening starts; the live transcript above isn't, to keep it quiet. */}
+          <p className="text-sm text-muted-text" role="status">
+            {copy.listening}
+          </p>
+        </div>
       )}
+      {!mic.listening && mic.heardNothing && <Notice>{copy.heardNothing}</Notice>}
 
       <form
         onSubmit={(e) => {
           e.preventDefault()
+          mic.clearHeardNothing()
           void send(draft)
         }}
         className="flex flex-wrap items-end gap-3">
@@ -252,7 +297,10 @@ export default function ChatIntake({ state, dispatch }: Props) {
             value={draft}
             maxLength={MAX_TEXT}
             placeholder={copy.messagePlaceholder}
-            onChange={(e) => setDraft(e.target.value)}
+            onChange={(e) => {
+              setDraft(e.target.value)
+              mic.clearHeardNothing()
+            }}
             className="field"
           />
         </div>

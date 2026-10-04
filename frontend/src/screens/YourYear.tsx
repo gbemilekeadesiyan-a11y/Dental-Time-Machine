@@ -73,10 +73,11 @@ export default function YourYear({ state, onEditCare }: Props) {
         </Notice>
       ) : (
         <>
-          <div className="glass grid items-center gap-8 rounded-3xl p-6 sm:grid-cols-[auto_1fr] sm:p-8">
+          {/* data-narrate: the guide (feature/guide) highlights this while it speaks about it. */}
+          <div data-narrate="year-this" className="glass grid items-center gap-8 rounded-3xl p-6 sm:grid-cols-[auto_1fr] sm:p-8">
             <MaxRing left={answer.outcome.result.max_left.this_year} annualMax={plan.annual_max} />
             <div className="space-y-4">
-              <dl className="space-y-4" aria-live="polite">
+              <dl data-narrate="year-next" className="space-y-4" aria-live="polite">
                 <div>
                   <dt className="text-sm text-muted-text">You&apos;ll likely pay</dt>
                   <dd>
@@ -97,7 +98,9 @@ export default function YourYear({ state, onEditCare }: Props) {
             </div>
           </div>
           {/* The bonus reminder (feature/summary), repeated on the last step so the flow ends on it. */}
-          <ResetReminder resetDate={plan.reset_date} leftThisYear={answer.outcome.result.max_left.this_year} />
+          <div data-narrate="plan-ahead">
+            <ResetReminder resetDate={plan.reset_date} leftThisYear={answer.outcome.result.max_left.this_year} />
+          </div>
         </>
       )}
     </StepShell>

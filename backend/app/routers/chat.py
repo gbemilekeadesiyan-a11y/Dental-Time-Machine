@@ -38,7 +38,7 @@ from fastapi import APIRouter, HTTPException, Response
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from app import sockets
-from app.ai import bedrock, polly
+from app.ai import bedrock, voice
 from app.ai.dollar_guard import allowed_amounts, extract_amounts, guard
 from app.ai.language import detect as detect_language
 from app.ai.plain_text import plain_text
@@ -230,10 +230,12 @@ def _next_step(request: ChatRequest) -> str:
         return (
             "Their care is in; their plan details aren't. Ask for at most two details per reply, "
             "in this order, skipping any they already gave in this conversation: "
-            "(1) annual maximum and deductible; (2) what share their plan covers for basic care "
-            "like fillings and major care like crowns; (3) when their plan year resets and "
-            "whether their dentist is in network. If they don't know one, tell them where to find it "
-            "(their benefits summary or HR) and move on. Never suggest example amounts or percentages."
+            "(1) annual maximum and deductible; (2) what share their plan covers for preventive care "
+            "like cleanings and checkups, and for basic care like fillings; (3) what share it covers "
+            "for major care like crowns, and when their plan year resets (always ask for the reset "
+            "date if they haven't given it); (4) whether their dentist is in network. If they don't "
+            "know one, tell them where to find it (their benefits summary or HR) and move on. "
+            "Never suggest example amounts or percentages."
         )
     if not _zip_given(request):
         return (
@@ -304,7 +306,7 @@ What you do:
 4. Only for procedures already confirmed (listed below), ask one at a time: "Did your dentist say this can wait?" Never ask this about procedures that aren't confirmed yet.
 5. When the user asks what they'll pay, answer with the calculator's figures below.
 
-How to reply: write your complete reply to the user as plain text first. Then, if their latest message gave you new procedures, plan details, a "can wait" answer, or said that's everything, call {_RECORD} once. You won't get to speak after the tool call, so don't write "let me note that" and stop.
+How to reply: write your complete reply to the user as plain text first. Then, if their latest message gave you new procedures, plan details, a "can wait" answer, or said that's everything, call {_RECORD} once. If their latest message states any plan details, record every plan detail in it, even ones you recorded before: the app only shows the user what you record now. You won't get to speak after the tool call, so don't write "let me note that" and stop.
 
 Examples of the voice and pacing. They show tone, length and one-thing-at-a-time only: never reuse their sentences, openings or details; respond to what this user actually said.
 User: "my dentist said i need a crown and a couple fillings, honestly no idea what any of that means"
@@ -462,19 +464,105 @@ def _link_crowns(proposals: list[Procedure], request: ChatRequest) -> list[Proce
     return linked
 
 
+# ---------- numbers the user said ----------
+# Plan values from the model are kept only if the user said that number. The dollar guard's
+# extract_amounts is stricter on purpose (it skips bare numbers under 100), so plan details
+# use their own, wider reading of what the user said: "deductible 50", "1.5k", "fifteen hundred".
+
+# 1,500 / 1.500 (grouped thousands), or digits with up to two decimals; then an optional "k".
+_DIGITS = re.compile(r"(?<![\w.,])(\d{1,3}(?:[,.]\d{3})+(?!\d)|\d+)(?:[.,](\d{1,2})(?!\d))?(\s?k\b)?", re.IGNORECASE)
+_PERCENT_MARK = re.compile(r"\s?(?:%|percent\b|per cent\b|por ciento\b|pour cent\b|por cento\b)", re.IGNORECASE)
+_WORD = re.compile(r"[a-záéíóúñü]+", re.IGNORECASE)
+
+_UNITS = {
+    "zero": 0, "one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8,
+    "nine": 9, "ten": 10, "eleven": 11, "twelve": 12, "thirteen": 13, "fourteen": 14, "fifteen": 15,
+    "sixteen": 16, "seventeen": 17, "eighteen": 18, "nineteen": 19, "twenty": 20, "thirty": 30,
+    "forty": 40, "fifty": 50, "sixty": 60, "seventy": 70, "eighty": 80, "ninety": 90,
+    "cero": 0, "uno": 1, "una": 1, "dos": 2, "tres": 3, "cuatro": 4, "cinco": 5, "seis": 6, "siete": 7,
+    "ocho": 8, "nueve": 9, "diez": 10, "once": 11, "doce": 12, "trece": 13, "catorce": 14, "quince": 15,
+    "dieciséis": 16, "dieciseis": 16, "diecisiete": 17, "dieciocho": 18, "diecinueve": 19, "veinte": 20,
+    "veintiuno": 21, "veintiún": 21, "veintidós": 22, "veintidos": 22, "veintitrés": 23, "veintitres": 23,
+    "veinticuatro": 24, "veinticinco": 25, "veintiséis": 26, "veintiseis": 26, "veintisiete": 27,
+    "veintiocho": 28, "veintinueve": 29, "treinta": 30, "cuarenta": 40, "cincuenta": 50, "sesenta": 60,
+    "setenta": 70, "ochenta": 80, "noventa": 90,
+    # Spanish hundreds add up ("mil quinientos" is 1,500).
+    "cien": 100, "ciento": 100, "doscientos": 200, "trescientos": 300, "cuatrocientos": 400,
+    "quinientos": 500, "seiscientos": 600, "setecientos": 700, "ochocientos": 800, "novecientos": 900,
+}
+_HUNDRED = {"hundred"}  # Multiplies what came before: "fifteen hundred" is 1,500.
+_THOUSAND = {"thousand", "mil"}
+_JOINERS = {"and", "y"}  # "one hundred and fifty", "treinta y cinco"
+_NUMBER_WORDS = set(_UNITS) | _HUNDRED | _THOUSAND
+
+
+def _said_numbers(text: str) -> list[tuple[int, float, bool]]:
+    """(position, value, marked as a percent) for every number in the text, digits or words."""
+    found: list[tuple[int, float, bool]] = []
+    for m in _DIGITS.finditer(text):
+        whole = float(re.sub(r"\D", "", m[1]))
+        value = whole + (float(f"0.{m[2]}") if m[2] else 0)
+        if m[3]:
+            value *= 1000
+        after = text[m.end() :]
+        found.append((m.start(), value, bool(_PERCENT_MARK.match(after))))
+
+    words = list(_WORD.finditer(text))
+    i = 0
+    while i < len(words):
+        start, total, current, used = words[i].start(), 0.0, 0.0, 0
+        j = i
+        while j < len(words):
+            w = words[j][0].lower()
+            prev = words[j - 1][0].lower() if j > 0 else ""
+            if w == "ciento" and prev == "por":  # "por ciento" is a percent sign, not a hundred.
+                break
+            if w in _UNITS:
+                current += _UNITS[w]
+            elif w in _HUNDRED:
+                current = (current or 1) * 100
+            elif w in _THOUSAND:
+                total += (current or 1) * 1000
+                current = 0
+            elif w in _JOINERS and used and j + 1 < len(words) and words[j + 1][0].lower() in _NUMBER_WORDS:
+                pass
+            else:
+                break
+            used += 1
+            j += 1
+        if used and not all(words[k][0].lower() in _JOINERS for k in range(i, j)):
+            after = text[words[j - 1].end() :]
+            found.append((start, total + current, bool(_PERCENT_MARK.match(after))))
+            i = j
+        else:
+            i += 1
+    return sorted(found)
+
+
+def user_numbers(text: str) -> list[float]:
+    """Every number the user said, in order: digits with or without $ or %, "k" for
+    thousands, and English or Spanish number words ("fifteen hundred", "mil quinientos")."""
+    return [value for _, value, _ in _said_numbers(text)]
+
+
+def _said_money(text: str) -> list[float]:
+    """The numbers the user said that aren't percents."""
+    return [value for _, value, percent in _said_numbers(text) if not percent]
+
+
 _MONTHS = [
-    ("january", "enero", "janvier", "janeiro"),
-    ("february", "febrero", "février", "fevereiro"),
-    ("march", "marzo", "mars", "março"),
-    ("april", "abril", "avril", "abril"),
+    ("january", "enero", "janvier", "janeiro", "jan", "ene", "janv"),
+    ("february", "febrero", "février", "fevereiro", "feb", "fév", "fev", "févr"),
+    ("march", "marzo", "mars", "março", "mar"),
+    ("april", "abril", "avril", "abril", "apr", "abr", "avr"),
     ("may", "mayo", "mai", "maio"),
-    ("june", "junio", "juin", "junho"),
-    ("july", "julio", "juillet", "julho"),
-    ("august", "agosto", "août", "agosto"),
-    ("september", "septiembre", "septembre", "setembro"),
-    ("october", "octubre", "octobre", "outubro"),
-    ("november", "noviembre", "novembre", "novembro"),
-    ("december", "diciembre", "décembre", "dezembro"),
+    ("june", "junio", "juin", "junho", "jun"),
+    ("july", "julio", "juillet", "julho", "jul", "juil"),
+    ("august", "agosto", "août", "agosto", "aug", "ago"),
+    ("september", "septiembre", "septembre", "setembro", "sep", "sept"),
+    ("october", "octubre", "octobre", "outubro", "oct"),
+    ("november", "noviembre", "novembre", "novembro", "nov"),
+    ("december", "diciembre", "décembre", "dezembro", "dec", "dic", "déc", "dez"),
 ]
 _IN_NETWORK = re.compile(r"\b(in[- ]network|en la red|dentro de la red|dans le réseau|na rede|em rede)\b", re.IGNORECASE)
 _OUT_OF_NETWORK = re.compile(
@@ -501,12 +589,34 @@ def _said_percent(percent: float, said: str) -> bool:
     return bool(re.search(rf"(?<![\d.,]){re.escape(number)}{words}", said, re.IGNORECASE))
 
 
+# A bare number ("basic 80") counts as a coverage percent only when the user is talking about coverage.
+_COVERAGE_WORDS = re.compile(
+    r"\b(cover(?:s|ed|age)?|basic|major|preventive|preventative|cubre|cubierto|cobertura|b[áa]sic[oa]s?|mayor(?:es)?|preventiv[oa]s?)\b",
+    re.IGNORECASE,
+)
+_FULLY_COVERED = re.compile(
+    r"\b(?:fully|completely|totally) covered\b|\bcovered (?:in full|fully|completely)\b|\bcubre todo\b"
+    r"|\bcubiert[oa]s? (?:por completo|totalmente)\b",
+    re.IGNORECASE,
+)
+
+
+def _said_coverage(percent: float, said: str) -> bool:
+    """True if the user said this percent: with a percent sign or word, as a bare number while
+    talking about coverage, or as "fully covered" for 100."""
+    if _said_percent(percent, said):
+        return True
+    if percent == 100 and _FULLY_COVERED.search(said):
+        return True
+    return bool(_COVERAGE_WORDS.search(said)) and any(abs(percent - n) < 0.005 for n in user_numbers(said))
+
+
 def _plan_details(proposed: _ProposedPlan | None, request: ChatRequest) -> PlanDetails | None:
     """Plan fields the user actually said. Anything else from the model is dropped."""
     if proposed is None:
         return None
     said = _user_text(request)
-    amounts = extract_amounts(said)
+    amounts = _said_money(said)
 
     def money(value: float | None) -> float | None:
         ok = value is not None and 0 <= value <= MAX_FEE and any(abs(value - a) < 0.005 for a in amounts)
@@ -515,7 +625,7 @@ def _plan_details(proposed: _ProposedPlan | None, request: ChatRequest) -> PlanD
     shares: dict[str, float | None] = {}
     for category in ("preventive", "basic", "major"):
         percent = (proposed.coverage or {}).get(category)
-        ok = percent is not None and 0 <= percent <= 100 and _said_percent(percent, said)
+        ok = percent is not None and 0 <= percent <= 100 and _said_coverage(percent, said)
         shares[category] = round(percent / 100, 4) if ok and percent is not None else None
     coverage = PartialCoverage(**shares) if any(v is not None for v in shares.values()) else None
 
@@ -638,8 +748,11 @@ def _chat(request: ChatRequest) -> ChatResponse:
     system = _system_prompt(request, _cost_facts(request.procedures, result) if result else None)
     turns = [(t.role, t.text) for t in request.turns] if user_turns else [("user", _GREETING_REQUEST)]
     messages = bedrock.text_messages(turns)
-    # Figures the user may hear: the engine's results, their confirmed fees and plan, and what they typed.
-    allowed = allowed_amounts(request.procedures, request.plan) | set(extract_amounts(_user_text(request)))
+    # Figures the user may hear: the engine's results, their confirmed fees and plan, and what they
+    # said, including bare and spoken numbers ("deductible 50", "fifteen hundred"), so repeating a
+    # plan detail back doesn't trip the guard and lose the proposal.
+    said = _user_text(request)
+    allowed = allowed_amounts(request.procedures, request.plan) | set(extract_amounts(said)) | set(_said_money(said))
     if result is not None:
         allowed |= allowed_amounts(result)
     if request.document is not None:
@@ -832,7 +945,10 @@ class SpeakRequest(BaseModel):
 
 @router.post("/speak", response_class=Response, responses={200: {"content": {"audio/mpeg": {}}}})
 def post_speak(request: SpeakRequest) -> Response:
-    audio = polly.synthesize(request.text, request.language)
-    if audio is None:
+    """ElevenLabs, else Polly, else the same 503 as before; the frontend keeps the text either way.
+    X-Voice says which voice spoke, for debugging."""
+    spoken = voice.speak(request.text, request.language)
+    if spoken is None:
         raise HTTPException(status_code=503, detail=VOICE_UNAVAILABLE)
-    return Response(content=audio, media_type="audio/mpeg", headers={"Cache-Control": "no-store"})
+    audio, name = spoken
+    return Response(content=audio, media_type="audio/mpeg", headers={"Cache-Control": "no-store", "X-Voice": name})

@@ -22,7 +22,7 @@ The AI talks. The engine counts.
 ## 3. Stack
 - Frontend: React + Vite + TypeScript, Tailwind CSS, Framer Motion. Recharts approved for charts. Deployed on Vercel.
 - Backend: Python 3.11+, FastAPI, Pydantic, pytest. Hosting: TBD (not Render).
-- AI: AWS Bedrock in us-east-1 (Amazon Nova or Claude Haiku), called only from FastAPI with boto3. Amazon Polly for text-to-speech (approved for Malama's feature). Browser Web Speech API for speech-to-text. No Textract.
+- AI: AWS Bedrock in us-east-1 (Amazon Nova or Claude Haiku), called only from FastAPI with boto3. Text-to-speech (approved for Malama's feature): ElevenLabs first (REST API called from FastAPI with httpx), Amazon Polly as the fallback. Browser Web Speech API for speech-to-text. No Textract.
 - Do not add other frameworks, databases, auth libraries, state managers, or cloud services without asking.
 
 ## 4. Repo layout and ownership
@@ -65,7 +65,7 @@ Rule: on your own feature branch you may edit any file you need, including share
 - Backend: `cd backend && .venv\Scripts\Activate.ps1` (Windows) then `uvicorn app.main:app --reload` (port 8000)
 - Tests: `cd backend && pytest -q`
 - Frontend: `cd frontend && npm install && npm run dev` (port 5173). API base URL from `VITE_API_URL` in frontend/.env.
-- Env files: backend/.env (AWS keys, region), frontend/.env (VITE_API_URL only). Both git-ignored.
+- Env files: backend/.env (AWS keys, region, Bedrock model, ElevenLabs key, voice and model), frontend/.env (VITE_API_URL only). Both git-ignored. Names only, no values: docs/SECRETS.md.
 
 ## 6. Data shapes (MVP shapes frozen; only ADD optional fields, never rename or remove)
 snake_case JSON everywhere, same names in Python and TypeScript.
@@ -93,6 +93,10 @@ Feature additions (approved, all optional; any teammate may add them on their br
 - Plan.annual_premium (optional): needed for a fair cash vs insurance comparison
 - OptimizeRequest.budget_this_year (optional): cap on this year's you_pay (Kuwa's budget filter)
 - OptimizeResult.alternatives (optional): top 5 valid schedules [{schedule, you_pay, moved}] for Samuel's timeline permutations
+- NarrateStep: "what_it_means"|"two_futures"|"summary"|"find_care"|"your_year"
+- NarrateRequest: step (NarrateStep), preferences, procedures [Procedure], plan, schedule
+- NarrateSegment: text (guarded), target (data-narrate id | null), pause_ms
+- NarrateResponse: segments [NarrateSegment], next_step (NarrateStep | null), next_label
 
 ## 7. API contract
 MVP (frozen):
@@ -106,8 +110,9 @@ MVP (frozen):
 | POST | /explain | {term, language, style} | {text} (fake fallback) |
 Feature additions (approved):
 | POST | /chat | ChatRequest | ChatResponse | Malama |
+| POST | /narrate | NarrateRequest | NarrateResponse (no LLM in v1: templates filled with engine figures) | Malama (guide) |
 | POST | /summary | SummaryRequest | SummaryResponse | Malama (text) |
-| POST | /speak | {text, language} | audio/mpeg (Polly) | Malama |
+| POST | /speak | {text, language} | audio/mpeg (ElevenLabs, Polly fallback; header X-Voice: elevenlabs|polly) | Malama |
 | POST | /read-document | multipart file (pdf/jpg/png, max 5 MB) | DocumentReadResult | Chuck |
 | GET | /plans | | [PlanOption] (demo options) | Kuwa |
 | GET | /dentists | ?zip&max_distance_miles | [DentistListing] | Kuwa |
@@ -146,9 +151,10 @@ Malama (branch feature/chat): personalization, language understanding, voice cha
 - Start of flow: voice/text intake ("Tell me what your dentist said") -> /chat -> proposed procedures + plan details -> user confirms on a form before anything is applied.
 - Asks "Did your dentist say this can wait?" per procedure; sets can_wait only on an explicit yes from the user, never inferred.
 - Personalization: language + style chosen by the user (or offered from browser language), session only. Adapts wording, never numbers.
-- End of flow: /summary writes a recap of the engine's results in the user's language and style; spoken with Polly if voice_on. Uses only figures from the OptimizeResult/Result passed in.
-- Voice: push-to-talk with Web Speech API (lang matches preferences), Polly voice per language. Show the transcript. Text input always available.
+- End of flow: /summary writes a recap of the engine's results in the user's language and style; spoken aloud if voice_on (ElevenLabs, Polly fallback). Uses only figures from the OptimizeResult/Result passed in.
+- Voice: push-to-talk with Web Speech API (lang matches preferences), ElevenLabs voice (Polly voice per language as the fallback). Show the transcript. Text input always available.
 - Owns ai/bedrock.py and ai/dollar_guard.py (shared by Chuck and Iyin).
+- Guide narration (branch feature/guide): after intake, a guide walks the user through What it means, Two futures, Summary, Find care and Your year. backend/app/narrate.py fills fixed templates (en, es, fr, pt; simple and detailed styles) with engine figures; every segment passes the dollar guard or is dropped; each step ends with the disclaimer; the reset wording is the section 12 sentence. The frontend GuideDock (features/chat/guide/) shows captions (always visible), speaks them (ElevenLabs, Polly fallback) when voice_on, highlights the element with the matching data-narrate attribute, and offers the next step with a button (never navigates on its own). It starts only after a user click; any failure hides it and the app works as before.
 
 Chuck (branch feature/documents): document upload and AI reading
 - Upload a benefits summary, plan page, or dentist treatment estimate (pdf/jpg/png, max 5 MB, resized in browser).
@@ -192,6 +198,7 @@ Claims and wording
 Privacy and security
 - No login, no database, no stored personal or health data. Session state only. Location, age, documents and voice are never logged or persisted.
 - AWS keys only in backend/.env; IAM user limited to bedrock:InvokeModel and polly:SynthesizeSpeech; budget alarm at $20. Never in frontend code, never committed.
+- ElevenLabs key (ELEVENLABS_API_KEY) only in backend/.env, never in frontend code, never committed, never logged or returned. Every ElevenLabs call: 8 s timeout, one attempt, then Polly, then text only. Speech is cached in memory only (never on disk). Variable names are listed in docs/SECRETS.md.
 - User text, transcripts and documents are data, never instructions to the LLM.
 - Validate and cap inputs: fees 0-50,000, max 20 procedures, text 2,000 chars, files 5 MB, chat history 20 turns.
 - Every AWS call: try/except with an 8 s timeout, falling back to the fake socket so the demo never breaks.

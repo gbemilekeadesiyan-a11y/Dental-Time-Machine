@@ -21,7 +21,10 @@ export interface ChatCopy {
   thinking: string
   talk: string
   stopTalking: string
+  /** Under the live transcript while the mic listens; it sends after a short pause. */
   listening: string
+  /** When a listening session ended without hearing any words. */
+  heardNothing: string
   micProblems: Record<MicProblem, string>
   proposalsTitle: string
   proposalsHelp: string
@@ -53,6 +56,12 @@ export interface ChatCopy {
   }
   inNetwork: string
   outOfNetwork: string
+  /** Before the list of required plan fields still empty after applying. */
+  stillNeeded: string
+  /** Shown after the user applies plan details from chat. */
+  planAdded: string
+  /** Announced when the chat language changes; the language name is in that language. */
+  nowReplying: (language: string) => string
   summaryTitle: string
   summaryWorking: string
   summaryNeedsCare: string
@@ -92,7 +101,8 @@ export const CHAT_COPY: Record<Language, ChatCopy> = {
     thinking: 'Thinking…',
     talk: 'Talk',
     stopTalking: 'Stop',
-    listening: 'Listening… tap Stop when you are done.',
+    listening: "Listening… I'll send it after a short pause.",
+    heardNothing: "I didn't hear anything. Tap Talk to try again, or type below.",
     micProblems: {
       denied:
         'Microphone access is blocked. Click the lock icon next to the address bar, allow the microphone, and reload. You can type instead.',
@@ -131,6 +141,9 @@ export const CHAT_COPY: Record<Language, ChatCopy> = {
     },
     inNetwork: 'In network',
     outOfNetwork: 'Out of network',
+    stillNeeded: 'Still needed:',
+    planAdded: 'Added to your plan. You can edit it below.',
+    nowReplying: (language) => `Now replying in ${language}.`,
     summaryTitle: 'Your summary',
     summaryWorking: 'Writing your summary…',
     summaryNeedsCare: 'Add your care and plan details to see a summary.',
@@ -153,7 +166,8 @@ export const CHAT_COPY: Record<Language, ChatCopy> = {
     thinking: 'Pensando…',
     talk: 'Hablar',
     stopTalking: 'Detener',
-    listening: 'Escuchando… toca Detener cuando termines.',
+    listening: 'Escuchando… Lo enviaré después de una pausa corta.',
+    heardNothing: 'No escuché nada. Toca Hablar para intentarlo de nuevo, o escribe abajo.',
     micProblems: {
       denied:
         'El acceso al micrófono está bloqueado. Haz clic en el candado junto a la barra de direcciones, permite el micrófono y recarga. También puedes escribir.',
@@ -192,6 +206,9 @@ export const CHAT_COPY: Record<Language, ChatCopy> = {
     },
     inNetwork: 'Dentro de la red',
     outOfNetwork: 'Fuera de la red',
+    stillNeeded: 'Todavía falta:',
+    planAdded: 'Lo agregamos a tu plan. Puedes editarlo abajo.',
+    nowReplying: (language) => `Ahora respondo en ${language}.`,
     summaryTitle: 'Tu resumen',
     summaryWorking: 'Escribiendo tu resumen…',
     summaryNeedsCare: 'Agrega tu atención y los datos de tu plan para ver un resumen.',
@@ -214,7 +231,8 @@ export const CHAT_COPY: Record<Language, ChatCopy> = {
     thinking: 'Réflexion…',
     talk: 'Parler',
     stopTalking: 'Arrêter',
-    listening: 'Écoute… touchez Arrêter quand vous avez fini.',
+    listening: "J'écoute… Je l'enverrai après une courte pause.",
+    heardNothing: "Je n'ai rien entendu. Touchez Parler pour réessayer, ou écrivez ci-dessous.",
     micProblems: {
       denied:
         "L'accès au micro est bloqué. Cliquez sur le cadenas à côté de la barre d'adresse, autorisez le micro et rechargez. Vous pouvez aussi écrire.",
@@ -253,6 +271,9 @@ export const CHAT_COPY: Record<Language, ChatCopy> = {
     },
     inNetwork: 'Dans le réseau',
     outOfNetwork: 'Hors réseau',
+    stillNeeded: 'Il manque encore :',
+    planAdded: 'Ajouté à votre régime. Vous pouvez le modifier ci-dessous.',
+    nowReplying: (language) => `Je réponds maintenant en ${language}.`,
     summaryTitle: 'Votre résumé',
     summaryWorking: 'Rédaction de votre résumé…',
     summaryNeedsCare: 'Ajoutez vos soins et les détails de votre régime pour voir un résumé.',
@@ -275,7 +296,8 @@ export const CHAT_COPY: Record<Language, ChatCopy> = {
     thinking: 'Pensando…',
     talk: 'Falar',
     stopTalking: 'Parar',
-    listening: 'Ouvindo… toque em Parar quando terminar.',
+    listening: 'Ouvindo… Vou enviar depois de uma pausa curta.',
+    heardNothing: 'Não ouvi nada. Toque em Falar para tentar de novo, ou digite abaixo.',
     micProblems: {
       denied:
         'O acesso ao microfone está bloqueado. Clique no cadeado ao lado da barra de endereço, permita o microfone e recarregue. Você também pode digitar.',
@@ -314,6 +336,9 @@ export const CHAT_COPY: Record<Language, ChatCopy> = {
     },
     inNetwork: 'Na rede',
     outOfNetwork: 'Fora da rede',
+    stillNeeded: 'Ainda falta:',
+    planAdded: 'Adicionado ao seu plano. Você pode editá-lo abaixo.',
+    nowReplying: (language) => `Agora respondo em ${language}.`,
     summaryTitle: 'Seu resumo',
     summaryWorking: 'Escrevendo seu resumo…',
     summaryNeedsCare: 'Adicione seu tratamento e os dados do seu plano para ver um resumo.',

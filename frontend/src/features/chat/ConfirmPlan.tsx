@@ -14,7 +14,8 @@ interface Props {
 
 /**
  * Plan details the user said in chat. Shows only what they said; applying fills those
- * fields in the plan form, where the user can still edit everything.
+ * fields in the plan form, where the user can still edit everything. Lists the required
+ * fields that would still be empty, so the user knows what's left to tell the assistant.
  */
 export default function ConfirmPlan({ details, plan, copy, onApply, onDismiss }: Props) {
   const titleId = useId()
@@ -33,23 +34,33 @@ export default function ConfirmPlan({ details, plan, copy, onApply, onDismiss }:
     rows.push([f.deductible_paid_this_year, formatMoney(details.deductible_paid_this_year)])
   if (details.in_network !== null) rows.push([f.in_network, details.in_network ? copy.inNetwork : copy.outOfNetwork])
 
-  function apply() {
-    const coverage = { ...plan.coverage }
-    for (const c of ['preventive', 'basic', 'major'] as const) {
-      const share = details.coverage?.[c]
-      if (share !== null && share !== undefined) coverage[c] = share
-    }
-    onApply({
-      ...plan,
-      annual_max: details.annual_max ?? plan.annual_max,
-      deductible: details.deductible ?? plan.deductible,
-      coverage,
-      reset_date: details.reset_date ?? plan.reset_date,
-      used_this_year: details.used_this_year ?? plan.used_this_year,
-      deductible_paid_this_year: details.deductible_paid_this_year ?? plan.deductible_paid_this_year,
-      in_network: details.in_network ?? plan.in_network,
-    })
+  // The plan as it would be after Apply: what the user said here, over what's already in the form.
+  const coverage = { ...plan.coverage }
+  for (const c of ['preventive', 'basic', 'major'] as const) {
+    const share = details.coverage?.[c]
+    if (share !== null && share !== undefined) coverage[c] = share
   }
+  const applied: Plan = {
+    ...plan,
+    annual_max: details.annual_max ?? plan.annual_max,
+    deductible: details.deductible ?? plan.deductible,
+    coverage,
+    reset_date: details.reset_date ?? plan.reset_date,
+    used_this_year: details.used_this_year ?? plan.used_this_year,
+    deductible_paid_this_year: details.deductible_paid_this_year ?? plan.deductible_paid_this_year,
+    in_network: details.in_network ?? plan.in_network,
+  }
+
+  // Required fields still empty after Apply (the ones completePlan needs from the user).
+  const required: [string, boolean][] = [
+    [f.annual_max, Number.isFinite(applied.annual_max)],
+    [f.deductible, Number.isFinite(applied.deductible)],
+    [f.preventive, Number.isFinite(applied.coverage.preventive)],
+    [f.basic, Number.isFinite(applied.coverage.basic)],
+    [f.major, Number.isFinite(applied.coverage.major)],
+    [f.reset_date, /^\d{2}-\d{2}$/.test(applied.reset_date)],
+  ]
+  const missing = required.filter(([, filled]) => !filled).map(([label]) => label)
 
   return (
     <section aria-labelledby={titleId} className="space-y-4 rounded-2xl bg-card p-4 shadow-sm ring-1 ring-ink/5">
@@ -67,8 +78,13 @@ export default function ConfirmPlan({ details, plan, copy, onApply, onDismiss }:
           </div>
         ))}
       </dl>
+      {missing.length > 0 && (
+        <p className="text-sm text-ink">
+          <span className="font-semibold">{copy.stillNeeded}</span> {missing.join(', ')}
+        </p>
+      )}
       <div className="flex flex-wrap gap-3">
-        <button type="button" onClick={apply} className="btn-primary">
+        <button type="button" onClick={() => onApply(applied)} className="btn-primary">
           {copy.applyPlan}
           <ArrowRight />
         </button>

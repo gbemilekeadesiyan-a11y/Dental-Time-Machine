@@ -364,10 +364,21 @@ def test_no_plan_proposed_when_nothing_was_said(client: TestClient, llm) -> None
     assert "proposed_plan" not in data
 
 
-def test_coverage_needs_a_percent_the_user_said(client: TestClient, llm) -> None:
+@pytest.mark.parametrize(
+    ("said", "kept"),
+    [
+        # A bare number counts as a percent only next to a coverage word.
+        ("Basic care is 80 I think", 0.8),
+        ("My number is 80", None),
+    ],
+)
+def test_bare_coverage_number_needs_a_coverage_word(client: TestClient, llm, said: str, kept: float | None) -> None:
     llm(plan_reply(coverage={"basic": 80}))
-    data = post(client, body(("user", "Basic care is 80 I think")))
-    assert "proposed_plan" not in data
+    data = post(client, body(("user", said)))
+    if kept is None:
+        assert "proposed_plan" not in data
+    else:
+        assert data["proposed_plan"]["coverage"]["basic"] == kept
 
 
 @pytest.mark.parametrize(
@@ -382,6 +393,123 @@ def test_reset_date_from_month_names(client: TestClient, llm, said: str) -> None
 def test_reset_date_not_said_is_dropped(client: TestClient, llm) -> None:
     llm(plan_reply(reset_date="07-01"))
     assert "proposed_plan" not in post(client, body(("user", "My plan resets on 01/01")))
+
+
+# ---------- plan details in the user's own words ----------
+
+
+@pytest.mark.parametrize(
+    ("said", "expected"),
+    [
+        ("12", [12]),
+        ("$1,500 and 50%", [1500, 50]),
+        ("my max is 1.5k", [1500]),
+        ("a 2k max", [2000]),
+        ("fifteen hundred", [1500]),
+        ("one thousand five hundred", [1500]),
+        ("fifty dollars", [50]),
+        ("twenty-five", [25]),
+        ("mil quinientos", [1500]),
+        ("cincuenta", [50]),
+        ("ochenta por ciento", [80]),
+    ],
+)
+def test_user_numbers(said: str, expected: list[float]) -> None:
+    assert chat_router.user_numbers(said) == expected
+
+
+@pytest.mark.parametrize(
+    ("said", "proposed"),
+    [
+        ("annual max 1500 deductible 50", {"annual_max": 1500, "deductible": 50}),
+        ("my max is 1.5k", {"annual_max": 1500}),
+        ("fifteen hundred dollar max, fifty dollar deductible", {"annual_max": 1500, "deductible": 50}),
+        ("mi máximo es mil quinientos y el deducible cincuenta", {"annual_max": 1500, "deductible": 50}),
+    ],
+)
+def test_plan_money_in_the_users_own_words(client: TestClient, llm, said: str, proposed: dict[str, float]) -> None:
+    llm(plan_reply(**proposed))
+    got = post(client, body(("user", said)))["proposed_plan"]
+    assert {k: got[k] for k in proposed} == proposed
+
+
+@pytest.mark.parametrize(
+    ("said", "coverage", "expected"),
+    [
+        ("basic is covered at 80 and major at 50", {"basic": 80, "major": 50}, {"preventive": None, "basic": 0.8, "major": 0.5}),
+        ("preventive is fully covered", {"preventive": 100}, {"preventive": 1.0, "basic": None, "major": None}),
+        ("preventive is 100 percent", {"preventive": 100}, {"preventive": 1.0, "basic": None, "major": None}),
+    ],
+)
+def test_coverage_in_the_users_own_words(
+    client: TestClient, llm, said: str, coverage: dict[str, float], expected: dict[str, float | None]
+) -> None:
+    llm(plan_reply(coverage=coverage))
+    assert post(client, body(("user", said)))["proposed_plan"]["coverage"] == expected
+
+
+@pytest.mark.parametrize("said", ["resets jan 1st", "my plan year starts Jan. 1", "se reinicia el 1 de ene"])
+def test_reset_date_from_month_abbreviations(client: TestClient, llm, said: str) -> None:
+    llm(plan_reply(reset_date="01-01"))
+    assert post(client, body(("user", said)))["proposed_plan"]["reset_date"] == "01-01"
+
+
+@pytest.mark.parametrize(
+    ("said", "proposed"),
+    [
+        # A number the user never said.
+        ("annual max 1500", {"annual_max": 2000}),
+        ("my deductible is fifty", {"deductible": 60}),
+        # Over the limits: percents above 100, money above 50,000.
+        ("basic is covered at 120", {"coverage": {"basic": 120}}),
+        ("my max is 60k", {"annual_max": 60_000}),
+        # "fully covered" means 100, not anything else.
+        ("preventive is fully covered", {"coverage": {"preventive": 90}}),
+    ],
+)
+def test_plan_values_the_user_did_not_say_are_dropped(client: TestClient, llm, said: str, proposed: dict[str, Any]) -> None:
+    llm(plan_reply(**proposed))
+    assert "proposed_plan" not in post(client, body(("user", said)))
+
+
+def test_whole_plan_in_one_casual_message(client: TestClient, llm) -> None:
+    said = "My max is fifteen hundred, deductible 50, preventive 100 percent, basic 80, major 50, resets jan 1st"
+    llm(
+        plan_reply(
+            annual_max=1500, deductible=50, coverage={"preventive": 100, "basic": 80, "major": 50}, reset_date="01-01"
+        )
+    )
+    proposed = post(client, body(("user", said)))["proposed_plan"]
+    assert proposed["annual_max"] == 1500
+    assert proposed["deductible"] == 50
+    assert proposed["coverage"] == {"preventive": 1.0, "basic": 0.8, "major": 0.5}
+    assert proposed["reset_date"] == "01-01"
+
+
+def test_reply_may_repeat_a_plan_figure_the_user_said(client: TestClient, llm) -> None:
+    # "$50" was said as a bare "50": the reply may repeat it, so the proposal isn't lost to a fallback.
+    say = "Got it: a $1,500 maximum and a $50 deductible. What share does your plan cover for basic care?"
+    llm(reply(say, plan={"annual_max": 1500, "deductible": 50}))
+    data = post(client, body(("user", "max fifteen hundred, deductible 50")))
+    assert data["say"] == say
+    assert data["proposed_plan"]["deductible"] == 50
+
+
+def test_prompt_says_to_record_every_plan_detail_each_time(client: TestClient, llm) -> None:
+    # The model sometimes skipped the tool when part of the plan was given in an earlier turn.
+    fake = llm(reply())
+    post(client, body(("user", "hi")))
+    assert "record every plan detail in it, even ones you recorded before" in fake.calls[0]["system"]
+
+
+def test_prompt_asks_for_preventive_and_reset_date(client: TestClient, llm) -> None:
+    fake = llm(reply())
+    payload = body(("user", "ok"), with_care=True)
+    payload["plan"] = None
+    post(client, payload)
+    system = fake.calls[0]["system"]
+    assert "preventive care like cleanings and checkups" in system
+    assert "when their plan year resets" in system
 
 
 @pytest.mark.parametrize(

@@ -65,7 +65,9 @@ export default function WhatItMeans({ state, onEditCare }: Props) {
         ready && (
           <>
             <Summary result={load.result} />
-            <GlossaryAccordion />
+            <div data-narrate="terms">
+              <GlossaryAccordion />
+            </div>
           </>
         )
       }
@@ -106,7 +108,8 @@ export default function WhatItMeans({ state, onEditCare }: Props) {
 
 function Summary({ result }: { result: Result }) {
   return (
-    <div className="glass space-y-3 rounded-3xl p-6">
+    // data-narrate: the guide (feature/guide) highlights this while it speaks about it.
+    <div data-narrate="total" className="glass space-y-3 rounded-3xl p-6">
       <p className="text-3xl font-light tracking-tight text-ink tabular-nums sm:text-4xl">
         Altogether, you&apos;ll likely pay <span className="font-medium">{formatMoney(result.totals.you_pay)}</span>
       </p>

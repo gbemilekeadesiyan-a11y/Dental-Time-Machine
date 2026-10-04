@@ -326,3 +326,30 @@ export interface DentistListing {
   languages: string[]
   accepting_new: boolean
 }
+
+// ---------- Feature addition (feature/guide): the step-by-step guide ----------
+
+export type NarrateStep = 'what_it_means' | 'two_futures' | 'summary' | 'find_care' | 'your_year'
+
+export interface NarrateRequest {
+  step: NarrateStep
+  preferences: Preferences
+  procedures: Procedure[]
+  plan: Plan
+  schedule: Schedule
+}
+
+export interface NarrateSegment {
+  /** One short sentence; every figure in it came from the engine (dollar guard). */
+  text: string
+  /** The data-narrate id to highlight, or null (the closing disclaimer). */
+  target: string | null
+  pause_ms: number
+}
+
+export interface NarrateResponse {
+  segments: NarrateSegment[]
+  /** The step the "next" button opens; null on the last step. */
+  next_step: NarrateStep | null
+  next_label: string
+}

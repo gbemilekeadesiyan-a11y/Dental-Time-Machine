@@ -55,7 +55,7 @@ export default function ResetReminder({ resetDate, leftThisYear }: Props) {
   return (
     <section aria-labelledby="reset-reminder-title" className="rounded-2xl bg-primary/5 p-4 ring-1 ring-primary/15 sm:p-5">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="min-w-0 flex-1 basis-64 space-y-1">
+        <div data-narrate="reset" className="min-w-0 flex-1 basis-64 space-y-1">
           <h4 id="reset-reminder-title" className="text-sm font-semibold tracking-wide text-primary uppercase">
             {REMINDER_TITLE}
           </h4>
@@ -73,7 +73,7 @@ export default function ResetReminder({ resetDate, leftThisYear }: Props) {
           {hasLeft && <p className="text-sm text-muted-text">{REMINDER_CHECK_PLAN}</p>}
         </div>
         {hasLeft && timing.remindOn && (
-          <button type="button" onClick={addReminder} className="btn-primary shrink-0">
+          <button type="button" onClick={addReminder} data-narrate="reminder" className="btn-primary shrink-0">
             <RollLabel>
               <CalendarIcon />
               {REMINDER_BUTTON}

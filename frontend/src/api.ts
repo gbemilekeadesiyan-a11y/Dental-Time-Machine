@@ -14,6 +14,8 @@ import type {
   ExplainRequest,
   ExplainResponse,
   Language,
+  NarrateRequest,
+  NarrateResponse,
   OptimizeRequest,
   OptimizeResult,
   ParseRequest,
@@ -183,6 +185,11 @@ export async function speak(text: string, language: Language, options: RequestOp
     throw new ApiError(response.status, isErrorResponse(body) ? body.detail : SERVER_MESSAGE)
   }
   return response.blob()
+}
+
+/** POST /narrate: the guide's captions for one step (feature/guide). Every figure is the engine's. */
+export function narrate(body: NarrateRequest, options?: RequestOptions): Promise<NarrateResponse> {
+  return post<NarrateResponse>('/narrate', body, options)
 }
 
 // ---------- feature/filters (Kuwa) ----------

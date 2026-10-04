@@ -397,5 +397,35 @@ class PlanComparison(_Model):
     sort_order: int
 
 
+# ---------- Feature addition (feature/guide): the step-by-step guide ----------
+
+NarrateStep = Literal["what_it_means", "two_futures", "summary", "find_care", "your_year"]
+# A data-narrate id on the page: lowercase letters, digits, "-" and "_" (procedure ids end up in "proc-<id>").
+NarrateTarget = Annotated[str, Field(pattern=r"^[a-z0-9_-]+$", max_length=MAX_ID + 8)]
+
+
+class NarrateRequest(_Model):
+    step: NarrateStep
+    preferences: Preferences
+    procedures: ProcedureList
+    plan: Plan
+    schedule: Schedule
+
+
+class NarrateSegment(_Model):
+    """One spoken caption. Its text passed the dollar guard; target is the element to highlight."""
+
+    text: str
+    target: NarrateTarget | None
+    pause_ms: Annotated[int, Field(ge=0, le=5_000)]
+
+
+class NarrateResponse(_Model):
+    segments: list[NarrateSegment]
+    # The step the "next" button opens; null on the last step.
+    next_step: NarrateStep | None
+    next_label: str
+
+
 # ChatRequest.document refers to DocumentReadResult, which is defined after it.
 ChatRequest.model_rebuild()

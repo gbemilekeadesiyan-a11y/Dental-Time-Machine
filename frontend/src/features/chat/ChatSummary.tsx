@@ -1,13 +1,16 @@
-import { useEffect, useId, useState } from 'react'
+import { useEffect, useId, useState, type Dispatch } from 'react'
 import { ApiError, isAbortError, optimize, summary } from '../../api'
 import Notice from '../../components/Notice'
-import type { AppState } from '../../state'
+import type { Action, AppState } from '../../state'
 import { CHAT_COPY } from './chatCopy'
 import { completePlan } from './chatUtils'
+import PreferencesPicker from './PreferencesPicker'
 import { useSpeaker } from './speech'
 
 interface Props {
   state: AppState
+  /** For the language and style picker in the header; it writes the same preferences as the chat. */
+  dispatch: Dispatch<Action>
 }
 
 interface Inputs {
@@ -24,7 +27,7 @@ type Outcome = { inputs: Inputs; ok: true; text: string } | { inputs: Inputs; ok
  * which recomputes every figure with the engine and passes the dollar guard. It already
  * ends with the reset wording and the disclaimer. Read aloud with Polly when voice is on.
  */
-export default function ChatSummary({ state }: Props) {
+export default function ChatSummary({ state, dispatch }: Props) {
   const { procedures, plan, schedule, preferences } = state
   const { language, style } = preferences
   const copy = CHAT_COPY[language]
@@ -59,9 +62,13 @@ export default function ChatSummary({ state }: Props) {
 
   return (
     <section aria-labelledby={titleId} className="glass space-y-4 rounded-3xl p-5 sm:p-6">
-      <h3 id={titleId} className="text-xl font-semibold tracking-tight text-ink">
-        {copy.summaryTitle}
-      </h3>
+      {/* Switching the language here rewrites the recap in that language. */}
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <h3 id={titleId} className="text-xl font-semibold tracking-tight text-ink">
+          {copy.summaryTitle}
+        </h3>
+        <PreferencesPicker variant="compact" preferences={preferences} dispatch={dispatch} />
+      </div>
 
       {procedures.length === 0 || ready === null ? (
         <Notice>{copy.summaryNeedsCare}</Notice>
