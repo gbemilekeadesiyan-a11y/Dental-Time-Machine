@@ -7,6 +7,9 @@ import TwoFutures from './screens/TwoFutures'
 import WhatItMeans from './screens/WhatItMeans'
 import YourYear from './screens/YourYear'
 import Landing from './features/timeline/landing/Landing'
+import ChatIntake from './features/chat/ChatIntake'
+import ChatSummary from './features/chat/ChatSummary'
+import PreferencesPicker from './features/chat/PreferencesPicker'
 import { initialState, reducer } from './state'
 
 interface ScreenDef {
@@ -33,13 +36,25 @@ export default function App() {
   function renderScreen(current: ScreenIndex) {
     switch (current) {
       case 0:
-        return <TellUs state={state} dispatch={dispatch} />
+        return (
+          <div className="space-y-6">
+            {/* Mount point (feature/chat): voice/text intake above the form. */}
+            <ChatIntake state={state} dispatch={dispatch} />
+            <TellUs state={state} dispatch={dispatch} />
+          </div>
+        )
       case 1:
         return <WhatItMeans state={state} onEditCare={() => setView(0)} />
       case 2:
         return <TwoFutures state={state} dispatch={dispatch} onEditCare={() => setView(0)} />
       case 3:
-        return <YourYear state={state} onEditCare={() => setView(0)} />
+        return (
+          <div className="space-y-6">
+            <YourYear state={state} onEditCare={() => setView(0)} />
+            {/* Mount point (feature/chat): the recap in the user's language. */}
+            <ChatSummary state={state} />
+          </div>
+        )
     }
   }
 
@@ -56,6 +71,8 @@ export default function App() {
         <header className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-sm font-semibold tracking-tight text-ink">Dental Time Machine</h1>
           <StepIndicator steps={SCREENS} current={view} onSelect={(i) => setView(i as ScreenIndex)} />
+          {/* Mount point (feature/chat): language, style and voice. */}
+          <PreferencesPicker preferences={state.preferences} dispatch={dispatch} />
         </header>
 
         <main className="flex-1">

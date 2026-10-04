@@ -6,15 +6,20 @@
 import type {
   CalculateRequest,
   CatalogItem,
+  ChatRequest,
+  ChatResponse,
   DemoResponse,
   ErrorResponse,
   ExplainRequest,
   ExplainResponse,
+  Language,
   OptimizeRequest,
   OptimizeResult,
   ParseRequest,
   Procedure,
   Result,
+  SummaryRequest,
+  SummaryResponse,
 } from './types'
 
 const API_URL: string = (() => {
@@ -120,4 +125,37 @@ export function explain(
   options?: RequestOptions,
 ): Promise<ExplainResponse> {
   return post<ExplainResponse>('/explain', { term, language, style } satisfies ExplainRequest, options)
+}
+
+// ---------- feature/chat (Malama) ----------
+
+/** POST /chat: one assistant reply. Proposals still need the user's confirmation. */
+export function chat(body: ChatRequest, options?: RequestOptions): Promise<ChatResponse> {
+  return post<ChatResponse>('/chat', body, options)
+}
+
+/** POST /summary: a recap of the engine's figures in the user's language. Ends with the disclaimer. */
+export function summary(body: SummaryRequest, options?: RequestOptions): Promise<SummaryResponse> {
+  return post<SummaryResponse>('/summary', body, options)
+}
+
+/** POST /speak: MP3 audio of the text (Polly). Fails with ApiError(503) when voice is unavailable. */
+export async function speak(text: string, language: Language, options: RequestOptions = {}): Promise<Blob> {
+  let response: Response
+  try {
+    response = await fetch(`${API_URL}/speak`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, language }),
+      signal: options.signal ?? null,
+    })
+  } catch (error) {
+    if (isAbortError(error)) throw error
+    throw new ApiError(0, NETWORK_MESSAGE)
+  }
+  if (!response.ok) {
+    const body: unknown = await response.json().catch(() => null)
+    throw new ApiError(response.status, isErrorResponse(body) ? body.detail : SERVER_MESSAGE)
+  }
+  return response.blob()
 }

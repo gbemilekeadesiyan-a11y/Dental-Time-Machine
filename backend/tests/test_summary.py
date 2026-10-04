@@ -119,6 +119,30 @@ def test_unsafe_wording_is_rejected(client: TestClient, llm, bad: str) -> None:
     assert len(fake.calls) == 2
 
 
+@pytest.mark.parametrize(
+    "bad",
+    [
+        "If your dentist confirms Crown 2 can wait, you'd likely pay $1,975 this year.",
+        "Si tu dentista confirma que la Corona 2 puede esperar, pagarías $1,975 este año.",
+        "Vous paieriez $1,975 cette année.",
+        "Você pagaria $1,975 este ano.",
+    ],
+)
+def test_two_year_total_called_this_year_is_rejected(client: TestClient, llm, bad: str) -> None:
+    # Section 9: $1,975 covers both plan years once crown 2 moves.
+    fake = llm(bad, bad)
+    payload = summary_body("crown1", "crown2")
+    assert post_summary(client, payload) == sockets.summary(SummaryRequest(**payload))
+    assert len(fake.calls) == 2
+
+
+def test_all_now_total_may_be_called_this_year(client: TestClient, llm) -> None:
+    # With nothing moved, the total really is this plan year's.
+    llm("Getting everything now, you'd likely pay $2,500 this year.")
+    text = post_summary(client, summary_body())
+    assert text.startswith("Getting everything now, you'd likely pay $2,500 this year.")
+
+
 def test_tampered_figures_in_request_are_ignored(client: TestClient, llm) -> None:
     # A client can't smuggle a figure in through the optimize field: the server recomputes it.
     payload = summary_body("crown1", "crown2")

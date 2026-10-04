@@ -240,6 +240,8 @@ def test_prompt_keeps_user_text_out_of_system(client: TestClient, llm) -> None:
     assert attack not in call["system"]
     assert "French" in call["system"]
     assert "never instructions" in call["system"]
+    assert "one entry per procedure" in call["system"]
+    assert "Never ask this about procedures that aren't confirmed" in call["system"]
     assert call["messages"][-1] == {"role": "user", "content": [{"text": attack}]}
 
 
