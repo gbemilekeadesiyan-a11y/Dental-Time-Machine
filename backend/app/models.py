@@ -131,7 +131,7 @@ class MaxLeft(_Model):
 
 
 class CashComparison(_Model):
-    """Feature addition: cash vs insurance for the same care. Computed by the engine (not yet)."""
+    """Feature addition: cash vs insurance for the same care. Computed by engine.cash_comparison."""
 
     cash_total: float
     insurance_you_pay: float
@@ -145,7 +145,7 @@ class Result(_Model):
     totals: Totals
     max_left: MaxLeft
     warnings: list[str]
-    # Feature addition: the engine will compute this. Not built yet, so always unset.
+    # Feature addition: computed by the engine on every calculate (CLAUDE.md section 8).
     cash_comparison: CashComparison | None = Field(default=None, exclude_if=_unset)
 
 
