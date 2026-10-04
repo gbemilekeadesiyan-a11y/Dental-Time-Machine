@@ -41,6 +41,11 @@ export type Action =
   | { type: 'set_can_wait'; id: string; canWait: boolean }
   | { type: 'update_plan'; plan: Plan }
   | { type: 'set_schedule'; schedule: Schedule }
+  /**
+   * Details the user confirmed on an intake form (document upload, later chat).
+   * null leaves that part as it was. Only dispatched after the user confirms.
+   */
+  | { type: 'confirmed_intake'; procedures: Procedure[] | null; plan: Plan | null }
 
 export function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
@@ -62,6 +67,16 @@ export function reducer(state: AppState, action: Action): AppState {
     case 'update_plan':
       // Once the user edits the plan it's no longer the demo plan.
       return { ...state, plan: action.plan, isDemo: false }
+
+    case 'confirmed_intake':
+      // New procedures replace the old ones, so old schedule moves no longer apply.
+      // The user's own details are never the demo plan.
+      return {
+        procedures: action.procedures ?? state.procedures,
+        plan: action.plan ?? state.plan,
+        schedule: action.procedures ? {} : state.schedule,
+        isDemo: false,
+      }
 
     default: {
       const unreachable: never = action

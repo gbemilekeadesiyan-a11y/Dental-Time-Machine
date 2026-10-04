@@ -50,17 +50,12 @@ export default function TellUs({ state, dispatch }: Props) {
 
 // ---------- document mount (feature/documents) ----------
 
-/**
- * Applies a confirmed document read. Plans use update_plan. Procedures wait on
- * a core-team state action (requested from Samuel), so for now we say so.
- */
+/** Applies a confirmed document read. Only parts the document had are replaced. */
 function applyDocument(dispatch: Dispatch<Action>, plan: Plan | null, procedures: Procedure[]): string {
-  if (plan) dispatch({ type: 'update_plan', plan })
-  if (procedures.length > 0) {
-    return plan
-      ? 'Your plan details were added below. Procedures from documents are coming soon, so please add them yourself for now.'
-      : 'Procedures from documents are coming soon. Please add them yourself for now.'
-  }
+  const hasProcedures = procedures.length > 0
+  dispatch({ type: 'confirmed_intake', procedures: hasProcedures ? procedures : null, plan })
+  if (plan && hasProcedures) return 'Your plan details and procedures were added below.'
+  if (hasProcedures) return 'Your procedures were added below.'
   return 'Your plan details were added below.'
 }
 
