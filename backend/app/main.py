@@ -41,7 +41,7 @@ from app.models import (
     Result,
 )
 from app.optimizer import optimize
-from app.routers import documents
+from app.routers import documents, term_explainer
 
 logger = logging.getLogger("dental_time_machine")
 
@@ -336,8 +336,8 @@ def post_parse(body: ParseRequest) -> list[Procedure]:
 
 @app.post("/explain", response_model=ExplainResponse)
 def post_explain(body: ExplainRequest) -> ExplainResponse:
-    """FAKE in the MVP: returns fixed glossary text."""
-    return ExplainResponse(text=sockets.explain(body.term, body.language, body.style))
+    """AI explanation behind the dollar guard; fixed glossary text if AWS fails (term_explainer.py)."""
+    return ExplainResponse(text=term_explainer.explain_term(body.term, body.language, body.style))
 
 
 app.include_router(documents.router)

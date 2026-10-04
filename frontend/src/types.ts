@@ -225,6 +225,8 @@ export interface DocumentReadResult {
   procedures: Procedure[]
   fields_found: string[]
   warnings: string[]
+  /** Feature addition. Confusing terms printed in the document, at most 8, letters only. */
+  terms_found?: string[]
 }
 
 export interface FilterState {

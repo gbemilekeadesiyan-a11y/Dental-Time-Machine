@@ -1,64 +1,56 @@
-import { useId, useRef, useState, type DragEvent } from 'react'
-import { ApiError, readDocument } from '../../api'
+import { useEffect, useId, useRef, useState, type DragEvent } from 'react'
 import Notice from '../../components/Notice'
-import type { DocumentReadResult } from '../../types'
-import { resizeImage } from './resizeImage'
+import { warmUpPdf } from './documentPreview'
 
 /** Matches the backend limit on POST /read-document (CLAUDE.md section 12: files 5 MB). */
-const MAX_BYTES = 5 * 1024 * 1024
+export const MAX_BYTES = 5 * 1024 * 1024
 const ACCEPTED_TYPES = ['application/pdf', 'image/jpeg', 'image/png']
 const ACCEPT = '.pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png'
 
 const WRONG_TYPE = 'Please upload a PDF, JPG, or PNG file.'
-const TOO_LARGE = 'The file is too large. Please upload a file under 5 MB.'
+export const TOO_LARGE = 'The file is too large. Please upload a file under 5 MB.'
 const EMPTY = 'The file is empty. Please upload a PDF, JPG, or PNG file.'
-const UNEXPECTED = 'Something went wrong. Please try again.'
 
 interface Props {
-  onRead: (result: DocumentReadResult) => void
+  /** Called with a file of an accepted type. The parent shrinks and reads it. */
+  onFile: (file: File) => void
+  /** A problem from reading the last file, shown under the drop zone. */
+  error?: string | null
 }
 
 /**
  * Drop zone plus a "Select file" button (the button is the keyboard and
- * screen-reader path; dragging is optional). Checks the file, shrinks photos,
- * and sends it to /read-document. The file stays in memory only.
+ * screen-reader path; dragging is optional). Checks the file type and hands it
+ * to the parent. The file stays in memory only.
  */
-export default function DocumentUpload({ onRead }: Props) {
+export default function DocumentUpload({ onFile, error: readError = null }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
   const hintId = useId()
   const [dragging, setDragging] = useState(false)
-  const [reading, setReading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [typeError, setTypeError] = useState<string | null>(null)
+  const error = typeError ?? readError
 
-  async function handleFile(original: File | undefined) {
-    if (!original || reading) return
-    setError(null)
-    if (!ACCEPTED_TYPES.includes(original.type)) return setError(WRONG_TYPE)
-    if (original.size === 0) return setError(EMPTY)
+  useEffect(warmUpPdf, [])
 
-    setReading(true)
-    try {
-      const file = await resizeImage(original)
-      if (file.size > MAX_BYTES) return setError(TOO_LARGE)
-      onRead(await readDocument(file))
-    } catch (e) {
-      setError(e instanceof ApiError ? e.message : UNEXPECTED)
-    } finally {
-      setReading(false)
-      // Let the same file be chosen again after an error.
-      if (inputRef.current) inputRef.current.value = ''
-    }
+  function handleFile(original: File | undefined) {
+    if (!original) return
+    setTypeError(null)
+    // Let the same file be chosen again later.
+    if (inputRef.current) inputRef.current.value = ''
+    if (!ACCEPTED_TYPES.includes(original.type)) return setTypeError(WRONG_TYPE)
+    if (original.size === 0) return setTypeError(EMPTY)
+    onFile(original)
   }
 
   function onDragOver(e: DragEvent) {
     e.preventDefault()
-    if (!reading) setDragging(true)
+    setDragging(true)
   }
 
   function onDrop(e: DragEvent) {
     e.preventDefault()
     setDragging(false)
-    void handleFile(e.dataTransfer.files[0])
+    handleFile(e.dataTransfer.files[0])
   }
 
   return (
@@ -67,7 +59,6 @@ export default function DocumentUpload({ onRead }: Props) {
         onDragOver={onDragOver}
         onDragLeave={() => setDragging(false)}
         onDrop={onDrop}
-        aria-busy={reading}
         className={
           'relative overflow-hidden rounded-3xl border-2 border-dashed px-6 py-10 transition-colors ' +
           (dragging ? 'border-primary bg-primary/10' : 'border-primary/40 bg-primary/5')
@@ -88,7 +79,7 @@ export default function DocumentUpload({ onRead }: Props) {
           </div>
 
           <p className="text-base font-medium text-ink">
-            {reading ? 'Reading your document…' : 'Drag and drop your file here or upload manually'}
+            Drag and drop your file here or upload manually
           </p>
 
           <input
@@ -98,17 +89,16 @@ export default function DocumentUpload({ onRead }: Props) {
             className="sr-only"
             tabIndex={-1}
             aria-hidden="true"
-            onChange={(e) => void handleFile(e.target.files?.[0])}
+            onChange={(e) => handleFile(e.target.files?.[0])}
           />
           <button
             type="button"
             onClick={() => inputRef.current?.click()}
-            disabled={reading}
             aria-describedby={hintId}
             className="btn-secondary min-w-44 border-white bg-card shadow-sm"
           >
             <UploadIcon />
-            {reading ? 'Reading…' : 'Select file'}
+            Select file
           </button>
 
           <p id={hintId} className="text-sm text-muted-text">

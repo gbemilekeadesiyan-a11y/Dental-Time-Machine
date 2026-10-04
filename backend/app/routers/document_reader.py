@@ -29,7 +29,7 @@ from pathlib import Path
 from typing import Any
 
 from app.demo_data import CATALOG
-from app.models import MAX_FEE, MAX_PROCEDURES, Coverage, DocumentReadResult, Plan, Procedure
+from app.models import MAX_FEE, MAX_PROCEDURES, MAX_TERMS_FOUND, Coverage, DocumentReadResult, Plan, Procedure
 
 # backend/.env holds the AWS keys (CLAUDE.md section 5). Never commit it.
 _ENV_FILE = Path(__file__).resolve().parents[2] / ".env"
@@ -48,6 +48,8 @@ FEE_MISSING_WARNING = (
 CHECK_WARNING = "We read this with AI. Please compare every value with your document before using it."
 
 _CATALOG = {item.cdt_code: item for item in CATALOG}
+# 2-40 characters of letters (any language), spaces, hyphens or apostrophes.
+_TERM = re.compile(r"[^\W\d_](?:[^\W\d_]| |-|'){1,39}")
 _RESET_DATE = re.compile(r"^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$")
 _FORMATS = {"pdf": "pdf", "png": "png", "jpg": "jpeg"}
 
@@ -69,7 +71,10 @@ SYSTEM_PROMPT = (
     f"Always answer by calling the {TOOL_NAME} tool exactly once."
 )
 
-USER_PROMPT = "Record the dental plan details and the recommended procedures printed in this document."
+USER_PROMPT = (
+    "Record the dental plan details and the recommended procedures printed in this document, "
+    "and list the insurance terms in it that an everyday person may find confusing."
+)
 
 _NULLABLE_NUMBER = {"type": ["number", "null"]}
 TOOL_SPEC = {
@@ -124,8 +129,17 @@ TOOL_SPEC = {
                             "required": ["cdt_code"],
                         },
                     },
+                    "terms": {
+                        "type": "array",
+                        "description": (
+                            "Up to 8 dental insurance terms printed in the document that an everyday person may "
+                            "find confusing, e.g. 'Waiting period', 'Coinsurance', 'Frequency limitation'. "
+                            "Short labels of words only: no numbers, amounts or sentences."
+                        ),
+                        "items": {"type": "string"},
+                    },
                 },
-                "required": ["plan", "procedures"],
+                "required": ["plan", "procedures", "terms"],
             }
         },
     }
@@ -216,7 +230,32 @@ def build_result(raw: Any) -> DocumentReadResult:
         warnings.append(
             f"We found {skipped} {noun} we can't estimate yet, so we left them out. You can add them yourself."
         )
-    return DocumentReadResult(plan=plan, procedures=procedures, fields_found=fields_found, warnings=warnings)
+    return DocumentReadResult(
+        plan=plan,
+        procedures=procedures,
+        fields_found=fields_found,
+        warnings=warnings,
+        terms_found=_read_terms(raw.get("terms")),
+    )
+
+
+def _read_terms(raw: Any) -> list[str]:
+    """Short plain labels only: letters, spaces, hyphens, apostrophes. No digits, so no money."""
+    if not isinstance(raw, list):
+        return []
+    terms: list[str] = []
+    seen: set[str] = set()
+    for entry in raw:
+        if not isinstance(entry, str):
+            continue
+        label = " ".join(entry.split())
+        if not _TERM.fullmatch(label) or label.lower() in seen:
+            continue
+        seen.add(label.lower())
+        terms.append(label)
+        if len(terms) >= MAX_TERMS_FOUND:
+            break
+    return terms
 
 
 def _number(value: Any, low: float, high: float) -> float | None:
