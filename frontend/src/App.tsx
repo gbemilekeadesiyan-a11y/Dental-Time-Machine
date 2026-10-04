@@ -2,6 +2,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { useReducer, useState } from 'react'
 import { ArrowLeft, ArrowRight } from './components/Icons'
 import StepIndicator from './components/StepIndicator'
+import FindCare from './features/filters/FindCare'
 import Start from './screens/Start'
 import TellUs from './screens/TellUs'
 import TwoFutures from './screens/TwoFutures'
@@ -19,11 +20,12 @@ const SCREENS = [
   { id: 'what-it-means', label: 'What it means' },
   { id: 'two-futures', label: 'Two futures' },
   { id: 'your-year', label: 'Your year' },
+  { id: 'find-care', label: 'Find care' },
 ] as const satisfies readonly ScreenDef[]
 
-type ScreenIndex = 0 | 1 | 2 | 3
+type ScreenIndex = 0 | 1 | 2 | 3 | 4
 type View = 'start' | ScreenIndex
-const LAST: ScreenIndex = 3
+const LAST: ScreenIndex = 4
 
 export default function App() {
   const [view, setView] = useState<View>('start')
@@ -40,6 +42,8 @@ export default function App() {
         return <TwoFutures state={state} dispatch={dispatch} onEditCare={() => setView(0)} />
       case 3:
         return <YourYear state={state} onEditCare={() => setView(0)} />
+      case 4:
+        return <FindCare state={state} onEditCare={() => setView(0)} />
     }
   }
 
