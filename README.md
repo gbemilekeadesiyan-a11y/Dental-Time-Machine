@@ -13,18 +13,32 @@ You can talk to it, type to it, or just snap a photo of your paperwork. It does 
 
 ## 😟 The problem
 
-Picture this. Your dentist says:
+**Problem statement:** *Employees with dental benefits get a treatment plan from their dentist and have to say yes on the spot, without knowing what they will pay, what their plan's words mean, or that changing **when** they get care could cost less. The math lives in dense plan documents, and nobody does it for them.*
+
+Picture it. Your dentist says:
 
 > *"You need a root canal, two crowns and two fillings."*
 
-Then the questions start:
+Right then, three questions hit at once:
 
-- *How much will my insurance actually pay?*
-- *How much will **I** have to pay?*
-- *What do "deductible", "coinsurance" and "annual maximum" even mean?*
-- *Is there any way to make this cheaper?*
+1. **"What will I actually pay?"** The answer depends on how the deductible, the coverage percentages and the yearly maximum stack up. Very few people can work that out.
+2. **"What does any of this mean?"** Benefits summaries are written in insurance language: deductible, coinsurance, annual maximum, plan year.
+3. **"Is there a cheaper way?"** Most dental plans cap what they pay each plan year. A big treatment plan goes past that cap, and you pay everything above it.
 
-Dental insurance paperwork is dense, full of jargon, and easy to misunderstand. Most people just say "yes" to the whole treatment plan at once and get a surprise bill later.
+<p align="center"><img src="docs/readme/01-the-problem.png" alt="Hand-drawn sketch: a small black creature tips a stack of dental bills (root canal, crowns, fillings) into a cup labeled yearly max $1,500. The cup overflows and the overflow is labeled everything over the cap comes out of your pocket." width="760"></p>
+
+**What happens today:** people agree to everything at once and get a surprise bill, put off care because they fear the cost, or let benefits go unused before the plan year resets.
+
+**Who it's for:** employees choosing and using their dental benefits, starting with the moment their dentist recommends treatment.
+
+**What the challenge asked, and where we answer it:**
+
+| codeLinc 11, Path 1: Dental asks... | Dental Time Machine answers with... |
+|---|---|
+| Describe a planned procedure and current plan details | Talk, type, upload a document, or fill a form (step 1) |
+| Translate dense insurance language into what is covered and what you owe | One clear line per procedure plus tappable term explanations (step 2) |
+| Sequence care across the plan year to maximize benefits | The timing optimizer and the "two futures" timeline (step 3) |
+| Bonus: track the annual max, network, unused benefits | Max ring, plan comparison, dentist finder, reset reminder (steps 4 to 6) |
 
 ## 💡 The big idea: timing matters
 
@@ -33,6 +47,8 @@ Most dental plans have a **yearly limit** (an "annual maximum"), the most the pl
 When your plan year resets, eligible benefits may become available again, based on your plan's rules. So **if your dentist confirms that some of your care can safely wait**, splitting it across two plan years can mean your plan pays more and you pay less.
 
 That's the "time machine": the same care with smarter timing.
+
+<p align="center"><img src="docs/readme/02-the-time-machine.png" alt="Hand-drawn sketch: two cups labeled this plan year and next plan year, separated by a dashed line labeled plan year resets. A small black creature carries crown 2 across the line. Notes read $2,500 to $1,975, about $525 less, and only if your dentist says it can wait." width="760"></p>
 
 ### Meet Maya (our demo patient)
 
@@ -133,6 +149,8 @@ To make sure of that, a **"dollar guard"** checks every sentence the AI writes, 
 
 The calculator is backed by **over 1,000 automated checks**, including Maya's exact numbers.
 
+<p align="center"><img src="docs/readme/03-the-golden-rule.png" alt="Hand-drawn sketch: a small black creature turns the crank of a box labeled the engine. A number passes a red gate labeled dollar guard into a speech bubble labeled the AI talks. A made-up number is stopped at the gate." width="760"></p>
+
 ### It never plays doctor
 - The app **never decides whether care can wait**. Only your dentist can. Procedures stay locked until *you* confirm "My dentist said this can wait."
 - Savings are always worded carefully: *"If your dentist confirms crown 2 can wait, you'd likely pay $1,975."* It never says *"you should wait."*
@@ -216,3 +234,5 @@ cd frontend && npm run build     # makes sure the website builds
 ---
 
 <p align="center"><strong>Estimate, not medical or coverage advice. Confirm with your dentist and plan.</strong></p>
+
+<p align="center"><sub>Sketches drawn in the style of <a href="https://github.com/helloianneo/ian-xiaohei-illustrations">Ian Xiaohei Illustrations</a> (MIT), featuring Ian's character 小黑 (Xiaohei).</sub></p>
