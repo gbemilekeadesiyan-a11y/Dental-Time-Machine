@@ -22,6 +22,7 @@ import type {
   SummaryRequest,
   SummaryResponse,
 } from './types'
+import type { DentistSearchResponse, FilterParseRequest, FilterParseResponse } from './features/filters/types'
 
 const API_URL: string = (() => {
   const url = import.meta.env.VITE_API_URL
@@ -179,4 +180,17 @@ export async function speak(text: string, language: Language, options: RequestOp
     throw new ApiError(response.status, isErrorResponse(body) ? body.detail : SERVER_MESSAGE)
   }
   return response.blob()
+}
+
+// ---------- feature/filters (Kuwa) ----------
+
+/** GET /dentists: dentists near a ZIP from the CMS NPI Registry, nearest first. */
+export function getDentists(zip: string, maxDistanceMiles: number, options?: RequestOptions): Promise<DentistSearchResponse> {
+  const query = new URLSearchParams({ zip, max_distance_miles: String(maxDistanceMiles) })
+  return get<DentistSearchResponse>(`/dentists?${query.toString()}`, options)
+}
+
+/** POST /filters/parse: the filters a plain-language request changes. Only changed keys come back. */
+export function parseFilters(text: string, options?: RequestOptions): Promise<FilterParseResponse> {
+  return post<FilterParseResponse>('/filters/parse', { text } satisfies FilterParseRequest, options)
 }
