@@ -82,8 +82,15 @@ export default function TermSheet({ term, explanation, onClose, onAsk }: Props) 
                 </p>
                 <div className="flex flex-wrap justify-end gap-3">
                   {onAsk && (
-                    <button type="button" onClick={() => onAsk(term)} className="btn-secondary">
-                      Ask a question
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onClose()
+                        onAsk(term)
+                      }}
+                      className="btn-secondary"
+                    >
+                      Ask the assistant
                     </button>
                   )}
                   <button ref={backRef} type="button" onClick={onClose} className="btn-primary">

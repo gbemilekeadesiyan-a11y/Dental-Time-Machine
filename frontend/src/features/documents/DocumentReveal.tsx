@@ -17,8 +17,8 @@ interface Props {
   phase: 'scanning' | 'revealed'
   terms: string[]
   onContinue: () => void
-  /** Opens the chat about a term. Not shown until the chat feature lands. */
-  onAsk?: (term: string) => void
+  /** Opens the chat about a term, or about the whole document when term is null. */
+  onAsk?: (term: string | null) => void
 }
 
 /**
@@ -56,7 +56,8 @@ export default function DocumentReveal({ previewUrl, phase, terms, onContinue, o
   const close = useCallback(() => {
     const term = selected
     setSelected(null)
-    if (term) requestAnimationFrame(() => cardRefs.current.get(term)?.focus())
+    // preventScroll: if the user is heading to the chat, focusing the card must not scroll back down.
+    if (term) requestAnimationFrame(() => cardRefs.current.get(term)?.focus({ preventScroll: true }))
   }, [selected])
 
   return (
@@ -161,17 +162,22 @@ export default function DocumentReveal({ previewUrl, phase, terms, onContinue, o
               />
             </LayoutGroup>
 
-            <motion.button
-              type="button"
-              onClick={onContinue}
-              className="btn-primary"
+            <motion.div
+              className="flex flex-wrap justify-center gap-3"
               initial={reduceMotion ? false : { opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: reduceMotion ? 0 : CARDS_DELAY + terms.length * 0.08 + 0.2 }}
             >
-              Check my details
-              <ArrowRight />
-            </motion.button>
+              {onAsk && (
+                <button type="button" onClick={() => onAsk(null)} className="btn-secondary bg-card">
+                  Ask about my document
+                </button>
+              )}
+              <button type="button" onClick={onContinue} className="btn-primary">
+                Check my details
+                <ArrowRight />
+              </button>
+            </motion.div>
           </div>
         ) : (
           <div className="absolute inset-x-0 bottom-5 flex justify-center">

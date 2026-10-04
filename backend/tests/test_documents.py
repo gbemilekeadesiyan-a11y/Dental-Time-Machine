@@ -17,6 +17,7 @@ from fastapi.testclient import TestClient
 from app.demo_data import CATALOG, CROWN_CDT, FILLING_CDT, ROOT_CANAL_CDT
 from app.main import app
 from app.models import DocumentReadResult
+from app.ai import bedrock
 from app.routers import document_reader, documents
 from app.routers.document_reader import (
     FEE_MISSING_WARNING,
@@ -357,7 +358,7 @@ def test_converse_request_treats_the_document_as_data(monkeypatch):
                 "output": {"message": {"content": [{"toolUse": {"name": document_reader.TOOL_NAME, "input": answer()}}]}},
             }
 
-    monkeypatch.setattr(document_reader, "_client", lambda: FakeClient())
+    monkeypatch.setattr(bedrock, "_client", lambda: FakeClient())
     assert document_reader.converse_bedrock(PDF, "pdf") == answer()
     assert "data" in sent["system"][0]["text"].lower()
     assert sent["toolConfig"]["toolChoice"] == {"tool": {"name": document_reader.TOOL_NAME}}
@@ -374,7 +375,7 @@ def test_converse_without_a_tool_call_is_an_error(monkeypatch):
         def converse(self, **kwargs):
             return {"stopReason": "end_turn", "output": {"message": {"content": [{"text": "Sure! You owe $5."}]}}}
 
-    monkeypatch.setattr(document_reader, "_client", lambda: FakeClient())
+    monkeypatch.setattr(bedrock, "_client", lambda: FakeClient())
     with pytest.raises(ReaderError):
         document_reader.converse_bedrock(PDF, "pdf")
 
@@ -460,3 +461,58 @@ def test_terms_found_defaults_to_empty_and_the_fake_has_none():
 def test_reader_tool_asks_for_terms():
     props = document_reader.TOOL_SPEC["toolSpec"]["inputSchema"]["json"]["properties"]
     assert props["terms"]["type"] == "array"
+
+
+# ---------- shared Bedrock helper: call_tool (forced tool use, used by the reader) ----------
+
+TOOL = {"toolSpec": {"name": "record", "description": "x", "inputSchema": {"json": {"type": "object"}}}}
+
+
+class ToolClient:
+    def __init__(self, response=None, error=None):
+        self.response, self.error, self.kwargs = response, error, {}
+
+    def converse(self, **kwargs):
+        self.kwargs = kwargs
+        if self.error:
+            raise self.error
+        return self.response
+
+
+def tool_reply(name, data):
+    return {"stopReason": "tool_use", "output": {"message": {"content": [{"toolUse": {"name": name, "input": data}}]}}}
+
+
+def test_call_tool_forces_the_tool_and_returns_its_input(monkeypatch):
+    client = ToolClient(tool_reply("record", {"a": 1}))
+    monkeypatch.setattr(bedrock, "_client", lambda: client)
+    messages = bedrock.text_messages([("user", "Read this.")])
+    assert bedrock.call_tool("system", messages, TOOL, max_tokens=900) == {"a": 1}
+    assert client.kwargs["toolConfig"] == {"tools": [TOOL], "toolChoice": {"tool": {"name": "record"}}}
+    assert client.kwargs["modelId"] == bedrock.MODEL_ID
+    assert client.kwargs["inferenceConfig"]["maxTokens"] == 900
+
+
+@pytest.mark.parametrize(
+    "response",
+    [
+        {"output": {"message": {"content": [{"text": "Sure! You owe $5."}]}}},
+        tool_reply("some_other_tool", {"a": 1}),
+        tool_reply("record", "not a dict"),
+        {},
+    ],
+)
+def test_call_tool_returns_none_without_the_right_tool_call(monkeypatch, response):
+    monkeypatch.setattr(bedrock, "_client", lambda: ToolClient(response))
+    assert bedrock.call_tool("system", bedrock.text_messages([("user", "x")]), TOOL) is None
+
+
+def test_call_tool_returns_none_on_aws_errors_and_logs_no_content(monkeypatch, caplog):
+    caplog.set_level(logging.DEBUG)
+    monkeypatch.setattr(bedrock, "_client", lambda: ToolClient(error=TimeoutError(SECRET.decode())))
+    assert bedrock.call_tool("system", bedrock.text_messages([("user", SECRET.decode())]), TOOL) is None
+    assert SECRET.decode() not in caplog.text
+
+
+def test_reader_has_no_bedrock_client_of_its_own():
+    assert not hasattr(document_reader, "_client")

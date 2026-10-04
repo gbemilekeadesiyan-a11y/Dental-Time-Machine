@@ -102,3 +102,35 @@ def call(
         logger.warning("Bedrock call failed: %s", type(exc).__name__)
         return None
     return text or None
+
+
+def call_tool(
+    system: str,
+    messages: list[dict[str, Any]],
+    tool: dict[str, Any],
+    max_tokens: int = DEFAULT_MAX_TOKENS,
+) -> dict[str, Any] | None:
+    """Ask the model to fill one tool's input (forced tool use). Returns that input, or
+    None if anything goes wrong or the model doesn't call the tool.
+
+    tool is a Converse toolSpec entry: {"toolSpec": {"name": ..., "inputSchema": {"json": ...}}}.
+    Used by the document reader (feature/documents) to get structured fields back.
+    """
+    name = tool["toolSpec"]["name"]
+    try:
+        response = _client().converse(
+            modelId=MODEL_ID,
+            system=[{"text": system}],
+            messages=messages,
+            toolConfig={"tools": [tool], "toolChoice": {"tool": {"name": name}}},
+            inferenceConfig={"maxTokens": max_tokens, "temperature": 0},
+        )
+        content = response.get("output", {}).get("message", {}).get("content", [])
+    except Exception as exc:  # noqa: BLE001 - every failure means "use the fallback"
+        logger.warning("Bedrock tool call failed: %s", type(exc).__name__)
+        return None
+    for block in content:
+        tool_use = block.get("toolUse") if isinstance(block, dict) else None
+        if tool_use and tool_use.get("name") == name and isinstance(tool_use.get("input"), dict):
+            return tool_use["input"]
+    return None

@@ -254,6 +254,9 @@ class ChatRequest(_Model):
     preferences: Preferences
     procedures: Annotated[list[Procedure], Field(max_length=MAX_PROCEDURES)]
     plan: Plan | None
+    # Feature addition (feature/documents): what the reader found in an uploaded document,
+    # so the chat can talk about it. Not yet confirmed by the user.
+    document: DocumentReadResult | None = Field(default=None, exclude_if=_unset)
 
 
 class PartialCoverage(_Model):
@@ -342,3 +345,7 @@ class DentistListing(_Model):
     in_network: bool
     languages: Annotated[list[LanguageName], Field(max_length=MAX_LANGUAGES)]
     accepting_new: bool
+
+
+# ChatRequest.document refers to DocumentReadResult, which is defined after it.
+ChatRequest.model_rebuild()

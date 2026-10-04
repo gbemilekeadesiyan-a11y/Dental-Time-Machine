@@ -11,18 +11,14 @@ Safety:
 - Any AWS error or timeout (8 s) also falls back to the glossary.
 - The term is data, never instructions.
 
-TEMPORARY: shares document_reader's small Bedrock client until Malama's
-app/ai/bedrock.py lands.
+Bedrock is called through the shared helper (app/ai/bedrock.py).
 """
 
 from __future__ import annotations
 
-import os
-from typing import Any
-
 from app import sockets
+from app.ai import bedrock
 from app.ai.dollar_guard import guard
-from app.routers import document_reader
 
 # Approved wording from CLAUDE.md section 12. Never claim everyone gets two maximums.
 RESET_WORDING = (
@@ -46,10 +42,6 @@ def explain_term(term: str, language: str = "en", style: str = "simple") -> str:
     return guard(lambda: _ask_bedrock(term, language, style), allowed=[], fallback=fixed)
 
 
-def _client() -> Any:
-    return document_reader._client()
-
-
 def _system_prompt(language: str, style: str) -> str:
     return (
         "You explain US dental insurance terms to everyday people.\n"
@@ -68,18 +60,9 @@ def _system_prompt(language: str, style: str) -> str:
 
 
 def _ask_bedrock_impl(term: str, language: str, style: str) -> str | None:
-    """One Bedrock call. None when AWS fails or the reply is unusable."""
-    try:
-        response = _client().converse(
-            modelId=os.environ.get("BEDROCK_MODEL_ID", document_reader.DEFAULT_MODEL_ID),
-            system=[{"text": _system_prompt(language, style)}],
-            messages=[{"role": "user", "content": [{"text": f"Explain this dental insurance term: <term>{term}</term>"}]}],
-            inferenceConfig={"maxTokens": 300, "temperature": 0.3},
-        )
-        parts = response.get("output", {}).get("message", {}).get("content", [])
-        text = " ".join(part.get("text", "") for part in parts if isinstance(part, dict)).strip()
-    except Exception:  # noqa: BLE001 - any AWS error means "use the glossary"; nothing is logged
-        return None
+    """One call through the shared helper. None when AWS fails or the reply is unusable."""
+    messages = bedrock.text_messages([("user", f"Explain this dental insurance term: <term>{term}</term>")])
+    text = bedrock.call(_system_prompt(language, style), messages, max_tokens=300)
     if not text or len(text) > MAX_CHARS:
         return None
     return text
