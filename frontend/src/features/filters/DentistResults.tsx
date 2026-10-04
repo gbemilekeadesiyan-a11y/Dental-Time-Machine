@@ -2,10 +2,11 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { ApiError, getDentists, isAbortError } from '../../api'
 import Notice from '../../components/Notice'
-import { SORT_LABELS, daysFromToday, matchAndSort } from './filterOptions'
+import { SORT_LABELS, daysFromToday, isNearby, matchAndSort, searchRadius } from './filterOptions'
 import type { DentistResult, DentistSearchResponse, Filters } from './types'
 
-const PAGE = 20
+/** A short list per page, so it's easy to choose from. */
+const PAGE = 7
 const DEBOUNCE_MS = 400
 
 interface Search {
@@ -15,11 +16,13 @@ interface Search {
 }
 
 /**
- * Dentists near the ZIP, narrowed by every filter. The registry is only asked again
- * when the ZIP changes or the distance grows; everything else filters what we have.
+ * Dentists near the ZIP, narrowed by every filter except distance: dentists inside the
+ * distance setting come first, farther ones are listed after them. The registry is only
+ * asked again when the ZIP changes or the search area grows; everything else filters what we have.
  */
 export default function DentistResults({ filters }: { filters: Filters }) {
-  const { zip, max_distance_miles: miles } = filters
+  const { zip } = filters
+  const miles = searchRadius(filters.max_distance_miles)
   const [search, setSearch] = useState<Search | null>(null)
   // How many cards to show; starts over whenever the filters change.
   const [page, setPage] = useState({ filters, count: PAGE })
@@ -63,6 +66,9 @@ export default function DentistResults({ filters }: { filters: Filters }) {
     return <Notice tone="problem">{search.outcome.message}</Notice>
   }
   const { data } = search.outcome
+  const visible = matches.slice(0, shown)
+  const nearbyCount = matches.filter((d) => isNearby(d, filters)).length
+  const within = `${filters.max_distance_miles} ${filters.max_distance_miles === 1 ? 'mile' : 'miles'}`
 
   return (
     <section aria-labelledby="results-title" className="space-y-4">
@@ -82,12 +88,15 @@ export default function DentistResults({ filters }: { filters: Filters }) {
       )}
 
       {data.source === 'npi' && matches.length === 0 && (
-        <Notice>No dentists match all of your filters. Try a longer distance or remove a filter.</Notice>
+        <Notice>No dentists match all of your filters. Try removing a filter.</Notice>
+      )}
+      {matches.length > 0 && nearbyCount === 0 && (
+        <Notice>None within {within} match, so here are the closest ones a bit farther away.</Notice>
       )}
 
       <ul className="space-y-3">
         <AnimatePresence initial={false}>
-          {matches.slice(0, shown).map((d) => (
+          {visible.map((d, i) => (
             <motion.li
               key={d.npi}
               layout={!reduceMotion}
@@ -96,6 +105,9 @@ export default function DentistResults({ filters }: { filters: Filters }) {
               exit={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.98 }}
               transition={{ duration: 0.2, ease: 'easeOut' }}
             >
+              {nearbyCount > 0 && i === nearbyCount && (
+                <h4 className="mb-3 mt-2 text-sm font-semibold text-ink/75">A bit farther away (over {within})</h4>
+              )}
               <DentistCard dentist={d} />
             </motion.li>
           ))}
