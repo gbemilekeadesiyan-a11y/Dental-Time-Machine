@@ -4,6 +4,7 @@ import Disclaimer from '../components/Disclaimer'
 import GlossaryAccordion from '../components/GlossaryAccordion'
 import Notice from '../components/Notice'
 import ProcedureCard from '../components/ProcedureCard'
+import StepShell from '../components/StepShell'
 import { formatMoney } from '../format'
 import type { AppState } from '../state'
 import type { Result } from '../types'
@@ -52,15 +53,25 @@ export default function WhatItMeans({ state, onEditCare }: Props) {
 
   const names = new Map(procedures.map((p) => [p.id, p.name]))
 
-  return (
-    <section aria-labelledby="what-it-means-title" className="space-y-6">
-      <div className="space-y-2">
-        <h2 id="what-it-means-title" className="text-4xl font-light tracking-tight text-ink sm:text-5xl">
-          What it means
-        </h2>
-        <p className="text-ink/80">What your plan likely pays and what you&apos;ll likely pay, in plain words.</p>
-      </div>
+  const ready = procedures.length > 0 && load.status === 'ready'
 
+  return (
+    <StepShell
+      titleId="what-it-means-title"
+      title="What it means"
+      intro={<>What your plan likely pays and what you&apos;ll likely pay, in plain words.</>}
+      // The total and the glossary stay in view beside the procedure cards.
+      aside={
+        ready && (
+          <>
+            <Summary result={load.result} />
+            <GlossaryAccordion />
+          </>
+        )
+      }
+      stickyAside
+      after={<Disclaimer />}
+    >
       {procedures.length === 0 ? (
         <Notice>
           Add your care first.{' '}
@@ -79,21 +90,17 @@ export default function WhatItMeans({ state, onEditCare }: Props) {
         </Notice>
       ) : (
         <>
-          <Summary result={load.result} />
-          <div className="space-y-3" aria-live="polite">
+          <div className="grid gap-4 sm:grid-cols-2" aria-live="polite">
             {load.result.per_procedure.map((line) => (
               <ProcedureCard key={line.id} name={names.get(line.id) ?? 'Procedure'} line={line} />
             ))}
           </div>
-          <GlossaryAccordion />
           {load.result.warnings.map((w) => (
             <Notice key={w}>{w}</Notice>
           ))}
         </>
       )}
-
-      <Disclaimer />
-    </section>
+    </StepShell>
   )
 }
 
@@ -114,7 +121,7 @@ function Summary({ result }: { result: Result }) {
 
 function LoadingCards({ count }: { count: number }) {
   return (
-    <div className="space-y-3" role="status" aria-label="Working out your estimate">
+    <div className="grid gap-4 sm:grid-cols-2" role="status" aria-label="Working out your estimate">
       {Array.from({ length: count }, (_, i) => (
         <div key={i} className="glass h-28 animate-pulse rounded-3xl motion-reduce:animate-none" />
       ))}

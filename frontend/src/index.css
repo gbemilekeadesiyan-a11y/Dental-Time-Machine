@@ -26,11 +26,79 @@
   --color-track: #dcdfe8; /* neutral ring track */
 
   --font-sans: "Inter Variable", system-ui, "Segoe UI", Roboto, sans-serif;
+
+  /* Headings track tighter than Tailwind's default -0.025em (section 11). */
+  --tracking-tight: -0.03em;
+
+  /* Section 11 breakpoints: tablet 810 px, desktop 1200 px (as tablet: and desktop:). */
+  --breakpoint-tablet: 50.625rem;
+  --breakpoint-desktop: 75rem;
 }
 
 body {
   @apply bg-bg text-ink font-sans antialiased;
   font-feature-settings: "cv11", "ss01";
+}
+
+/*
+ * Type scale (section 11): bold headings, tight tracking, balanced wrapping.
+ * Spacing between them comes from the 8 px scale: eyebrow to heading 12, heading to body 16.
+ */
+@utility heading-1 {
+  font-size: clamp(2.5rem, 5vw, 4.5rem);
+  line-height: 1.05;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+
+@utility heading-2 {
+  font-size: clamp(2rem, 3.5vw, 3rem);
+  line-height: 1.1;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+
+@utility heading-3 {
+  font-size: 1.25rem;
+  line-height: 1.3;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+
+/* Small uppercase label above a heading. muted-text keeps it at 4.5:1 or better. */
+@utility eyebrow {
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-muted-text);
+}
+
+/* Reading text: 16 px on phones, 18 px from tablet, about 60 characters a line. */
+@utility body-copy {
+  font-size: 1rem;
+  line-height: 1.6;
+  max-width: 60ch;
+
+  @media (min-width: 50.625rem) {
+    font-size: 1.125rem;
+  }
+}
+
+/* Compact section padding: 48 px phone, 64 px tablet, 96 px desktop. */
+@utility section-y {
+  padding-block: 3rem;
+
+  @media (min-width: 50.625rem) {
+    padding-block: 4rem;
+  }
+  @media (min-width: 75rem) {
+    padding-block: 6rem;
+  }
 }
 
 /* Frosted card: 70% white, blurred, thin white edge, very soft shadow. */
@@ -298,6 +366,27 @@ body {
     color: var(--roll-text);
   }
 
+  /* Text-only roll for big menu links: no fill, just the label rolling over itself. */
+  .menu-link {
+    --roll-time: 420ms;
+    --roll-ease: cubic-bezier(0.65, 0, 0.35, 1);
+    --roll-text: currentColor;
+  }
+  @media (hover: hover) {
+    .menu-link:hover .roll-a {
+      transform: translateY(-115%);
+    }
+    .menu-link:hover .roll-b {
+      transform: translateY(0);
+    }
+  }
+  .menu-link:focus-visible .roll-a {
+    transform: translateY(-115%);
+  }
+  .menu-link:focus-visible .roll-b {
+    transform: translateY(0);
+  }
+
   /* Reduced motion: no movement. Colors switch instantly and the second copy is hidden. */
   @media (prefers-reduced-motion: reduce) {
     :is(.btn-primary, .btn-secondary, .btn-light, .btn-outline),
@@ -312,12 +401,14 @@ body {
     .roll > .roll-b {
       display: none;
     }
-    :is(.btn-primary, .btn-secondary, .btn-light, .btn-outline):focus-visible .roll-a {
+    :is(.btn-primary, .btn-secondary, .btn-light, .btn-outline):focus-visible .roll-a,
+    .menu-link:focus-visible .roll-a {
       transform: none;
       color: var(--roll-text);
     }
     @media (hover: hover) {
-      :is(.btn-primary, .btn-secondary, .btn-light, .btn-outline):hover:not(:disabled) .roll-a {
+      :is(.btn-primary, .btn-secondary, .btn-light, .btn-outline):hover:not(:disabled) .roll-a,
+      .menu-link:hover .roll-a {
         transform: none;
         color: var(--roll-text);
       }
