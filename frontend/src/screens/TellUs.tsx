@@ -2,6 +2,7 @@ import { useId, type Dispatch } from 'react'
 import { ArrowRight } from '../components/Icons'
 import Notice from '../components/Notice'
 import { CAN_WAIT_HELP, CAN_WAIT_LABEL, CATEGORY_LABELS, DEMO_PLAN_LABEL } from '../copy'
+import DocumentIntake from '../features/documents/DocumentIntake'
 import { formatMoney } from '../format'
 import type { Action, AppState } from '../state'
 import type { Category, Coverage, Plan, Procedure } from '../types'
@@ -42,10 +43,23 @@ export default function TellUs({ state, dispatch }: Props) {
       </div>
       {error && <Notice tone="problem">{error}</Notice>}
 
+      <DocumentIntake onConfirm={(plan, procedures) => applyDocument(dispatch, plan, procedures)} />
+
       <ProcedureList procedures={state.procedures} dispatch={dispatch} />
       <PlanForm plan={state.plan} onChange={(plan) => dispatch({ type: 'update_plan', plan })} />
     </section>
   )
+}
+
+// ---------- document mount (feature/documents) ----------
+
+/** Applies a confirmed document read. Only parts the document had are replaced. */
+function applyDocument(dispatch: Dispatch<Action>, plan: Plan | null, procedures: Procedure[]): string {
+  const hasProcedures = procedures.length > 0
+  dispatch({ type: 'confirmed_intake', procedures: hasProcedures ? procedures : null, plan })
+  if (plan && hasProcedures) return 'Your plan details and procedures were added below.'
+  if (hasProcedures) return 'Your procedures were added below.'
+  return 'Your plan details were added below.'
 }
 
 // ---------- procedures ----------

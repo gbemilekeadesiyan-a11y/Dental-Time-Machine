@@ -45,7 +45,7 @@ function Glow() {
   return (
     <span
       aria-hidden="true"
-      className="pointer-events-none absolute -inset-x-16 -inset-y-12 -z-10 rounded-[50%] bg-ink/60 blur-3xl"
+      className="pointer-events-none absolute -inset-x-16 -inset-y-12 -z-10 rounded-[50%] bg-ink/70 blur-3xl"
     />
   )
 }

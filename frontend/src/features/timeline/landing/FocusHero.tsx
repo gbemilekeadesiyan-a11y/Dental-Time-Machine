@@ -38,6 +38,9 @@ export default function FocusHero({ onSeeMaya, loading, error }: Props) {
       {/* Darker edges, so the eye goes to the window. */}
       <div aria-hidden="true" className="absolute inset-0 bg-radial from-transparent from-45% to-ink/45" />
 
+      {/* A soft dark band along the top, so the white top-bar text stays readable on bright photos. */}
+      <div aria-hidden="true" className="absolute inset-x-0 top-0 h-48 bg-linear-to-b from-ink/50 to-transparent" />
+
       {/* The same photo, sharp, clipped to the window. */}
       <div aria-hidden="true" className="focus-window-clip absolute inset-0">
         <HeroPhoto variant="fit" />
