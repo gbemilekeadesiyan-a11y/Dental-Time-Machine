@@ -150,7 +150,7 @@ Malama (branch feature/chat): personalization, language understanding, voice cha
 - Voice: push-to-talk with Web Speech API (lang matches preferences), Polly voice per language. Show the transcript. Text input always available.
 - Owns ai/bedrock.py and ai/dollar_guard.py (shared by Chuck and Iyin).
 
-Chuck (branch feature/documents): document upload and AI reading
+Chuks (branch feature/documents): document upload and AI reading
 - Upload a benefits summary, plan page, or dentist treatment estimate (pdf/jpg/png, max 5 MB, resized in browser).
 - Bedrock vision model extracts Plan fields and/or Procedures (CDT code must be in the catalog whitelist; fees from the document are kept only after the user confirms them).
 - Always lands on an editable confirm form showing what was found and what was not. Never auto-applies.
