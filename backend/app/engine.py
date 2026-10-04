@@ -10,6 +10,7 @@ import heapq
 from decimal import ROUND_HALF_UP, Decimal
 
 from app.models import (
+    CashComparison,
     LineResult,
     MaxLeft,
     Plan,
@@ -28,6 +29,17 @@ STANDING_WARNING = (
     "Not checked yet: waiting periods, frequency limits, alternate benefit rules, "
     "and missing tooth clauses. Confirm these with your plan."
 )
+
+# Cash vs insurance (CLAUDE.md section 8). Totals this close are "about_equal".
+ABOUT_EQUAL_SHARE = Decimal("0.05")
+PREMIUMS_NOT_INCLUDED = (
+    "Premiums not included, because the plan's premium wasn't entered. "
+    "What you pay for the plan itself is not counted on the insurance side."
+)
+CASH_USES_BILLED_FEE = "Where no self-pay price was entered, the cash price is the dentist's full billed fee."
+CASH_USES_SELF_PAY = "Uses the self-pay prices you entered."
+ABOUT_EQUAL_NOTE = "Totals within 5% of each other are shown as about equal."
+CASH_ESTIMATE_NOTE = "Both are estimates. Ask your dentist for their self-pay price and confirm with your plan."
 
 
 class EngineError(ValueError):
@@ -205,4 +217,54 @@ def calculate(procedures: list[Procedure], plan: Plan, schedule: Schedule) -> Re
             next_year=_to_dollars(max_left["next_year"]),
         ),
         warnings=[STANDING_WARNING],
+        cash_comparison=cash_comparison(procedures, plan, years, you_total),
+    )
+
+
+def cash_comparison(
+    procedures: list[Procedure], plan: Plan, years: dict[str, Year], insurance_cents: int
+) -> CashComparison:
+    """Compare paying cash for the same care against using the plan (CLAUDE.md section 8).
+
+    Cash is each procedure's cash_price, or its billed_fee when none was given.
+    The insurance side is what the user pays under this schedule, plus the plan's
+    annual premium for each plan year the schedule uses, when the premium is known.
+    Without a premium, the comparison is out-of-pocket only and says so.
+    """
+    cash_cents = sum(_to_cents(p.billed_fee if p.cash_price is None else p.cash_price) for p in procedures)
+
+    assumptions: list[str] = []
+    if any(p.cash_price is None for p in procedures):
+        assumptions.append(CASH_USES_BILLED_FEE)
+    else:
+        assumptions.append(CASH_USES_SELF_PAY)
+
+    premium_cents: int | None = None
+    if plan.annual_premium is None:
+        assumptions.append(PREMIUMS_NOT_INCLUDED)
+    else:
+        plan_years = len(set(years.values())) or 1
+        premium_cents = _to_cents(plan.annual_premium) * plan_years
+        assumptions.append(
+            "Includes the plan premium for two plan years, because some care is in next plan year."
+            if plan_years == 2
+            else "Includes the plan premium for one plan year."
+        )
+
+    insurance_total = insurance_cents + (premium_cents or 0)
+    gap = abs(cash_cents - insurance_total)
+    if gap <= ABOUT_EQUAL_SHARE * max(cash_cents, insurance_total):
+        cheaper = "about_equal"
+    elif cash_cents < insurance_total:
+        cheaper = "cash"
+    else:
+        cheaper = "insurance"
+
+    assumptions += [ABOUT_EQUAL_NOTE, CASH_ESTIMATE_NOTE]
+    return CashComparison(
+        cash_total=_to_dollars(cash_cents),
+        insurance_you_pay=_to_dollars(insurance_cents),
+        premiums_in_period=None if premium_cents is None else _to_dollars(premium_cents),
+        cheaper=cheaper,
+        assumptions=assumptions,
     )
