@@ -27,8 +27,12 @@ FALLBACK_REPLY = (
     "Your plan documents or your plan's member services team can explain how it works for you."
 )
 
+# Symptom words. The ache pattern catches toothache(s) without matching "teaches".
 _SYMPTOMS = re.compile(
-    r"\b(pain\w*|hurt\w*|ache|aches|aching|swell\w*|swollen|fever\w*|bleed\w*|abscess\w*|infect\w*)\b",
+    r"\b("
+    r"pain\w*|hurt\w*|(?:tooth|jaw|gum)?aches?|aching|swell\w*|swollen|fever\w*|bleed\w*|abscess\w*|infect\w*"
+    r"|sore\w*|broken|sensitiv\w*|throb\w*"
+    r")\b",
     re.IGNORECASE,
 )
 
@@ -65,7 +69,7 @@ GLOSSARY: dict[str, str] = {
     ),
     "plan year": (
         "Your plan year is the twelve months your benefits run for. "
-        "Your deductible and annual maximum count up during it and start over when it resets."
+        "When your plan year resets, eligible benefits may become available again, based on your plan's rules."
     ),
     "waiting period": (
         "A waiting period is the time after you join a plan before some procedures are covered. "

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, Strict, model_validator
 
 # Input caps from CLAUDE.md section 10.
 MAX_FEE = 50_000
@@ -19,13 +19,19 @@ Category = Literal["preventive", "basic", "major"]
 Year = Literal["this_year", "next_year"]
 Reason = Literal["deductible", "coinsurance", "over_annual_max", "not_covered", "balance_bill"]
 
+MAX_ID = 64
+MAX_WAIVED = 3  # One entry per category at most.
+
+# Numbers are strict: JSON numbers only. true, "150", NaN and Infinity are rejected.
 # Any dollar amount a user can type in.
-Money = Annotated[float, Field(ge=0, le=MAX_FEE)]
-# A coverage share between 0 and 1, for example 0.8 for 80%.
-Share = Annotated[float, Field(ge=0, le=1)]
+Money = Annotated[float, Strict(), Field(ge=0, le=MAX_FEE, allow_inf_nan=False)]
+# A coverage share between 0 and 1, where 1 means fully covered.
+Share = Annotated[float, Strict(), Field(ge=0, le=1, allow_inf_nan=False)]
+# Procedure ids: letters, numbers, dashes and underscores (crypto.randomUUID() fits).
+Id = Annotated[str, Field(min_length=1, max_length=MAX_ID, pattern=r"^[A-Za-z0-9_-]+$")]
 
 # Maps procedure id to the plan year it is scheduled in.
-Schedule = dict[str, Year]
+Schedule = Annotated[dict[Id, Year], Field(max_length=MAX_PROCEDURES)]
 
 
 class _Model(BaseModel):
@@ -37,14 +43,14 @@ class _Model(BaseModel):
 class Procedure(_Model):
     """One procedure the dentist recommended."""
 
-    id: Annotated[str, Field(min_length=1, max_length=64)]
+    id: Id
     name: Annotated[str, Field(min_length=1, max_length=200)]
     cdt_code: Annotated[str, Field(max_length=10)]
     category: Category
-    tooth: Annotated[int, Field(ge=1, le=32)] | None = None
+    tooth: Annotated[int, Strict(), Field(ge=1, le=32)] | None = None
     billed_fee: Money
     allowed_fee: Money
-    depends_on: str | None = None
+    depends_on: Id | None = None
     can_wait: bool = False
 
     @model_validator(mode="before")
@@ -69,7 +75,9 @@ class Plan(_Model):
 
     annual_max: Money
     deductible: Money
-    deductible_waived_for: list[Category] = Field(default_factory=lambda: ["preventive"])
+    deductible_waived_for: Annotated[list[Category], Field(max_length=MAX_WAIVED)] = Field(
+        default_factory=lambda: ["preventive"]
+    )
     coverage: Coverage
     reset_date: Annotated[str, Field(pattern=r"^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$")]
     used_this_year: Money = 0
@@ -82,6 +90,8 @@ class Plan(_Model):
             raise ValueError("Benefits used this year can't be more than the annual maximum.")
         if self.deductible_paid_this_year > self.deductible:
             raise ValueError("Deductible paid this year can't be more than the deductible.")
+        if len(set(self.deductible_waived_for)) != len(self.deductible_waived_for):
+            raise ValueError("Each category can only be listed once in the categories that skip the deductible.")
         return self
 
 
