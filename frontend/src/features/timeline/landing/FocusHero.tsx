@@ -1,7 +1,7 @@
 import { useRef } from 'react'
 import { ArrowRight } from '../../../components/Icons'
 import Notice from '../../../components/Notice'
-import HeroArt from './HeroArt'
+import HeroPhoto from './HeroPhoto'
 import { LANDING } from './landingCopy'
 import SplitHeadline from './SplitHeadline'
 
@@ -12,27 +12,39 @@ interface Props {
 }
 
 /**
- * Full-screen hero. The art is drawn twice: blurred and dimmed behind, and sharp
- * inside a rounded "window" in the middle. Both copies fill the same box, so the
- * window always shows exactly what's behind it, just in focus.
+ * Full-screen hero. The photo is drawn twice: blurred and dimmed behind, and sharp
+ * inside a rounded "window" in the middle, so the window shows exactly what's behind
+ * it, just in focus. The edges are darkened to pull the eye to the window.
  */
 export default function FocusHero({ onSeeMaya, loading, error }: Props) {
   const heroRef = useRef<HTMLElement>(null)
 
   return (
     <section ref={heroRef} className="focus-hero relative h-svh min-h-[36rem] overflow-hidden">
-      {/* Blurred, dimmed background. Scaled up so the blur doesn't fade at the edges. */}
-      <div aria-hidden="true" className="absolute inset-0 scale-110 blur-2xl brightness-75">
-        <HeroArt />
+      {/* Ambient fill: the photo stretched over the whole hero, very blurred and dim, so the
+          space around the smaller photo isn't empty. Extends past the edges so the blur
+          doesn't fade to a light halo. */}
+      <div aria-hidden="true" className="absolute -inset-24 blur-3xl brightness-[0.7]">
+        <HeroPhoto variant="fill" priority />
       </div>
 
-      {/* The same art, sharp, clipped to the window. */}
+      {/* Blurred, dimmed copy of the centered photo; its soft edges melt into the fill.
+          Positioned from the center, so it lines up exactly with the sharp copy. */}
+      <div aria-hidden="true" className="hero-feather absolute -inset-24 blur-md brightness-[0.85]">
+        <HeroPhoto variant="fit" />
+      </div>
+
+      {/* Darker edges, so the eye goes to the window. */}
+      <div aria-hidden="true" className="absolute inset-0 bg-radial from-transparent from-45% to-ink/45" />
+
+      {/* The same photo, sharp, clipped to the window. */}
       <div aria-hidden="true" className="focus-window-clip absolute inset-0">
-        <HeroArt />
+        <HeroPhoto variant="fit" />
       </div>
 
       {/* The window frame: thin white border, a soft highlight, the way in. */}
-      <div className="focus-window-frame border border-white/70 shadow-2xl shadow-ink/25">
+      {/* Soft inner shadow darkens the window rim (depth, and contrast where the headline overlaps). */}
+      <div className="focus-window-frame border border-white/70 shadow-2xl shadow-ink/25 inset-shadow-[0_0_72px] inset-shadow-ink/45">
         <div
           aria-hidden="true"
           className="absolute inset-0 rounded-[inherit] bg-linear-to-br from-white/20 via-white/0 to-white/0"
