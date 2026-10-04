@@ -145,7 +145,10 @@ interface FutureCardProps {
 function FutureCard({ variant, title, detail, youPay, savings }: FutureCardProps) {
   const onGradient = variant === 'gradient'
   return (
-    <article className={'flex flex-col gap-6 rounded-3xl p-6 ' + (onGradient ? 'gradient-card' : 'glass')}>
+    // The guide (feature/guide) highlights these as "all-now" and "best".
+    <article
+      data-narrate={onGradient ? 'best' : 'all-now'}
+      className={'flex flex-col gap-6 rounded-3xl p-6 ' + (onGradient ? 'gradient-card' : 'glass')}>
       <div className="relative">
         <h3 className={'text-lg font-semibold ' + (onGradient ? 'text-white' : 'text-ink')}>{title}</h3>
         <p className={'text-sm ' + (onGradient ? 'text-white' : 'text-muted-text')}>{detail}</p>
@@ -251,7 +254,7 @@ function Timeline({ state, dispatch }: { state: AppState; dispatch: Dispatch<Act
   }
 
   return (
-    <div className="glass space-y-6 rounded-3xl p-6">
+    <div data-narrate="timeline" className="glass space-y-6 rounded-3xl p-6">
       <div className="space-y-1">
         <h3 className="text-xl font-semibold tracking-tight text-ink">Try a different timing</h3>
         <p className="text-sm text-muted-text">

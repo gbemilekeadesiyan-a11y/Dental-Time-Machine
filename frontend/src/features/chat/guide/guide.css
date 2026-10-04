@@ -1,0 +1,19 @@
+/*
+ * The element the guide is talking about: a 2 px primary ring and a soft glow. outline doesn't
+ * change layout and follows the element's rounded corners. Reduced motion keeps the ring only.
+ */
+.guide-highlight {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 4px;
+  box-shadow: 0 0 0 8px rgb(60 74 161 / 0.12);
+  transition:
+    outline-color 200ms ease-out,
+    box-shadow 300ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .guide-highlight {
+    box-shadow: none;
+    transition: none;
+  }
+}

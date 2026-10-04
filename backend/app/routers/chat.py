@@ -38,7 +38,7 @@ from fastapi import APIRouter, HTTPException, Response
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from app import sockets
-from app.ai import bedrock, polly
+from app.ai import bedrock, voice
 from app.ai.dollar_guard import allowed_amounts, extract_amounts, guard
 from app.ai.language import detect as detect_language
 from app.ai.plain_text import plain_text
@@ -945,7 +945,10 @@ class SpeakRequest(BaseModel):
 
 @router.post("/speak", response_class=Response, responses={200: {"content": {"audio/mpeg": {}}}})
 def post_speak(request: SpeakRequest) -> Response:
-    audio = polly.synthesize(request.text, request.language)
-    if audio is None:
+    """ElevenLabs, else Polly, else the same 503 as before; the frontend keeps the text either way.
+    X-Voice says which voice spoke, for debugging."""
+    spoken = voice.speak(request.text, request.language)
+    if spoken is None:
         raise HTTPException(status_code=503, detail=VOICE_UNAVAILABLE)
-    return Response(content=audio, media_type="audio/mpeg", headers={"Cache-Control": "no-store"})
+    audio, name = spoken
+    return Response(content=audio, media_type="audio/mpeg", headers={"Cache-Control": "no-store", "X-Voice": name})

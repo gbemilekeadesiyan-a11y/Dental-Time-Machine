@@ -270,14 +270,20 @@ export default function ChatIntake({ state, dispatch }: Props) {
       {mic.problem && <Notice>{copy.micProblems[mic.problem]}</Notice>}
       {speaker.failed && <Notice>{copy.voiceProblem}</Notice>}
       {mic.listening && (
-        <p className="text-sm text-ink" role="status">
-          {copy.listening} {mic.interim && <span className="text-muted-text">“{mic.interim}”</span>}
-        </p>
+        <div className="space-y-1">
+          {mic.interim && <p className="text-sm text-ink">“{mic.interim}”</p>}
+          {/* Announced once when listening starts; the live transcript above isn't, to keep it quiet. */}
+          <p className="text-sm text-muted-text" role="status">
+            {copy.listening}
+          </p>
+        </div>
       )}
+      {!mic.listening && mic.heardNothing && <Notice>{copy.heardNothing}</Notice>}
 
       <form
         onSubmit={(e) => {
           e.preventDefault()
+          mic.clearHeardNothing()
           void send(draft)
         }}
         className="flex flex-wrap items-end gap-3">
@@ -291,7 +297,10 @@ export default function ChatIntake({ state, dispatch }: Props) {
             value={draft}
             maxLength={MAX_TEXT}
             placeholder={copy.messagePlaceholder}
-            onChange={(e) => setDraft(e.target.value)}
+            onChange={(e) => {
+              setDraft(e.target.value)
+              mic.clearHeardNothing()
+            }}
             className="field"
           />
         </div>
