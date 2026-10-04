@@ -38,6 +38,51 @@
   }
 }
 
+/*
+ * The photo. Placed from the container's center (not its edge), so the blurred layer,
+ * which extends past the hero's edges, lines up exactly with the sharp copy.
+ */
+.hero-photo {
+  /*
+   * About 70% of the screen width, centered. Never smaller than what it takes to fill the
+   * window completely (with some margin), so the clear window always shows photo. The
+   * photo is 3:2. Sizes use viewport units and the window size, so the blurred and sharp
+   * copies line up exactly.
+   */
+  --pw: max(70vw, var(--win-w) * 1.4, var(--win-h) * 1.725);
+  position: absolute;
+  max-width: none;
+  width: var(--pw);
+  height: calc(var(--pw) / 1.5);
+  left: calc(50% - var(--pw) / 2);
+  top: calc(50% - var(--pw) / 3);
+}
+
+/*
+ * The blurred copy fades out over its outer 14%, so the photo's edges melt into the
+ * ambient fill instead of showing as a rectangle. The window sits well inside that
+ * margin, and the sharp copy in the window isn't masked.
+ */
+.hero-feather .hero-photo {
+  -webkit-mask-image:
+    linear-gradient(to right, transparent, #000 14%, #000 86%, transparent),
+    linear-gradient(to bottom, transparent, #000 14%, #000 86%, transparent);
+  -webkit-mask-composite: source-in;
+  mask-image:
+    linear-gradient(to right, transparent, #000 14%, #000 86%, transparent),
+    linear-gradient(to bottom, transparent, #000 14%, #000 86%, transparent);
+  mask-composite: intersect;
+}
+
+/* The ambient fill: the same photo stretched to cover the whole hero (very blurred behind it). */
+.hero-photo-cover {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 /* The sharp copy of the art, visible only inside the window. Same box as the blurred copy, so they always line up. */
 .focus-window-clip {
   clip-path: inset(calc((100% - var(--win-h)) / 2) calc((100% - var(--win-w)) / 2) round var(--win-r));
@@ -67,19 +112,35 @@
   text-align: right;
 }
 
-/* Wide screens: a diagonal. Each half overlaps one edge of the window by 2.5rem. */
+/*
+ * Wide screens: a diagonal, each half just beside the window (1.5rem gap). They don't
+ * overlap it: the sharp photo inside is light (teeth, lips, gloves), so white text over
+ * it would fall below 4.5:1.
+ */
 @media (min-width: 64rem) {
   .headline-left {
     left: auto;
-    right: calc(50% + var(--win-w) / 2 - 2.5rem);
+    right: calc(50% + var(--win-w) / 2 + 1.5rem);
     bottom: calc(50% - var(--win-h) / 2 + 2rem);
     text-align: left;
   }
 
   .headline-right {
     right: auto;
-    left: calc(50% + var(--win-w) / 2 - 2.5rem);
+    left: calc(50% + var(--win-w) / 2 + 1.5rem);
     top: calc(50% - var(--win-h) / 2 + 2rem);
     text-align: left;
   }
+}
+
+/*
+ * Graph paper behind the "How it works" section only: 1px primary lines at 5% on a
+ * 32px grid. A quiet nod to calendars and plan years.
+ */
+.graph-paper {
+  background-color: var(--color-bg);
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--color-primary) 5%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--color-primary) 5%, transparent) 1px, transparent 1px);
+  background-size: 32px 32px;
 }

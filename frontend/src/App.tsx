@@ -10,7 +10,9 @@ import Landing from './features/timeline/landing/Landing'
 import ChatIntake from './features/chat/ChatIntake'
 import ChatSummary from './features/chat/ChatSummary'
 import PreferencesPicker from './features/chat/PreferencesPicker'
+import SummaryScreen from './features/summary/SummaryScreen'
 import { initialState, reducer } from './state'
+import RollLabel from './components/RollLabel'
 
 interface ScreenDef {
   id: string
@@ -21,12 +23,13 @@ const SCREENS = [
   { id: 'tell-us', label: 'Tell us' },
   { id: 'what-it-means', label: 'What it means' },
   { id: 'two-futures', label: 'Two futures' },
+  { id: 'summary', label: 'Summary' }, // Mount point (feature/summary)
   { id: 'your-year', label: 'Your year' },
 ] as const satisfies readonly ScreenDef[]
 
-type ScreenIndex = 0 | 1 | 2 | 3
+type ScreenIndex = 0 | 1 | 2 | 3 | 4
 type View = 'start' | ScreenIndex
-const LAST: ScreenIndex = 3
+const LAST: ScreenIndex = 4
 
 export default function App() {
   const [view, setView] = useState<View>('start')
@@ -50,11 +53,13 @@ export default function App() {
       case 3:
         return (
           <div className="space-y-6">
-            <YourYear state={state} onEditCare={() => setView(0)} />
-            {/* Mount point (feature/chat): the recap in the user's language. */}
+            <SummaryScreen state={state} onEditCare={() => setView(0)} />
+            {/* Mount point (feature/chat): the chatbot recap under the visual summary. */}
             <ChatSummary state={state} />
           </div>
         )
+      case 4:
+        return <YourYear state={state} onEditCare={() => setView(0)} />
     }
   }
 
@@ -91,12 +96,16 @@ export default function App() {
 
         <footer className="flex justify-between gap-3">
           <button type="button" onClick={goBack} className="btn-secondary">
-            <ArrowLeft />
-            Back
+            <RollLabel>
+              <ArrowLeft />
+              Back
+            </RollLabel>
           </button>
           <button type="button" onClick={goNext} disabled={view === LAST} className="btn-primary">
-            Next
-            <ArrowRight />
+            <RollLabel>
+              Next
+              <ArrowRight />
+            </RollLabel>
           </button>
         </footer>
       </div>

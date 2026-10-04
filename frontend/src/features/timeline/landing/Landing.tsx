@@ -1,6 +1,7 @@
 import type { Dispatch } from 'react'
 import type { Action } from '../../../state'
 import { useLoadMaya } from '../../../useLoadMaya'
+import FeatureCarousel from './FeatureCarousel'
 import FocusHero from './FocusHero'
 import './landing.css'
 import StickyBar from './StickyBar'
@@ -35,6 +36,7 @@ export default function Landing({ dispatch, onStart }: Props) {
       <main>
         <FocusHero onSeeMaya={() => void seeMaya()} loading={loading} error={error} />
         <WordReveal />
+        <FeatureCarousel />
       </main>
     </div>
   )

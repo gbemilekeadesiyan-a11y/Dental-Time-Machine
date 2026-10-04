@@ -89,7 +89,7 @@ export interface Result {
   totals: Totals
   max_left: MaxLeft
   warnings: string[]
-  /** Feature addition. Computed by the engine (not built yet, so absent for now). */
+  /** Feature addition. Computed by the engine on every calculate. */
   cash_comparison?: CashComparison | null
 }
 
