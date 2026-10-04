@@ -484,6 +484,37 @@ def test_prompt_describes_the_voice(client: TestClient, llm) -> None:
     assert "Answer what they actually asked in your first sentence" in system
     assert "No filler" in system
     assert "Plain text only" in system
+    assert "Never list everything you still need" in system
+    assert "Short sentences" in system
+
+
+@pytest.mark.parametrize(
+    ("with_care", "can_wait", "step"),
+    [
+        (False, False, "Find out what their dentist recommended"),
+        (True, False, "did their dentist say it can wait?"),
+        (True, True, "Offer to walk them through their estimate"),
+    ],
+)
+def test_prompt_names_one_next_step(client: TestClient, llm, with_care: bool, can_wait: bool, step: str) -> None:
+    fake = llm(reply())
+    payload = body(("user", "ok"), with_care=with_care)
+    for p in payload["procedures"]:
+        p["can_wait"] = can_wait
+    post(client, payload)
+    system = fake.calls[0]["system"]
+    current = system.split("Where this conversation is now: ", 1)[1].split("\n", 1)[0]
+    assert step in current
+
+
+def test_plan_details_are_asked_two_at_a_time(client: TestClient, llm) -> None:
+    fake = llm(reply())
+    payload = body(("user", "ok"), with_care=True)
+    payload["plan"] = None
+    post(client, payload)
+    system = fake.calls[0]["system"]
+    assert "Ask for at most two details per reply" in system
+    assert "Don't ask about plan details yet" not in system
 
 
 # ---------- answering cost questions with the engine's figures ----------
